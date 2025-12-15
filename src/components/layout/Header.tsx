@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Globe, Sun, Moon, Shield, Wifi } from 'lucide-react';
+import { Globe, Sun, Moon, Shield, Wifi, Layers, Crosshair } from 'lucide-react';
 import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,16 +23,24 @@ export function Header() {
   return (
     <header className="py-4 sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-        <div className="flex items-center space-x-2 md:space-x-4 text-sm">
-          <span className="font-semibold text-primary/90 transition-colors hover:text-primary">von Busch GmbH</span>
+        <div className="flex items-center space-x-2 md:space-x-4 text-sm md:text-base">
+          <div className="flex items-center gap-1.5 group transition-colors duration-200 hover:text-primary/90">
+            <Layers className="h-5 w-5 flex-shrink-0 opacity-80" />
+            <span className="font-semibold">von Busch GmbH</span>
+          </div>
+          <span className="text-primary/30 text-xl font-light hidden sm:inline-block">|</span>
+          <div className="hidden sm:flex items-center gap-1.5 group transition-colors duration-200 hover:text-primary/90">
+            <Crosshair className="h-4 w-4 opacity-80" />
+            <span className="font-semibold text-xs md:text-sm">HXNWRK</span>
+          </div>
           <span className="text-primary/30 text-xl font-light">|</span>
           <div className="flex items-center gap-1.5 transition-colors hover:text-foreground">
-            <Shield className="h-5 w-5 text-blue-500" />
+            <Shield className="h-5 w-5 text-blue-500 mr-1" />
             <span className="font-medium">Cloudflare</span>
           </div>
           <span className="text-primary/30 text-xl font-light hidden sm:inline-block">|</span>
           <div className="hidden sm:flex items-center gap-1.5 transition-colors hover:text-foreground">
-            <Wifi className="h-4 w-4 text-green-500" />
+            <Wifi className="h-4 w-4 text-green-500 mr-1" />
             <span className="font-medium">Ubiquiti</span>
           </div>
         </div>
