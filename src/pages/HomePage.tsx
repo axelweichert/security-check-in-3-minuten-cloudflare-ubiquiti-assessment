@@ -66,34 +66,27 @@ export function HomePage() {
     });
   }, [currentStep, answers]);
   const handleSubmit = async () => {
+    const data = {
+      language: useFunnelStore.getState().language,
+      formData: {
+        ...answers,
+        consent_contact: answers.consent_contact === '1' ? 1 : 0,
+        consent_tracking: answers.consent_tracking === '1' ? 1 : 0,
+        discount_opt_in: answers.discount_opt_in === '1' ? 1 : 0,
+      }
+    };
     try {
-      const data = {
-        language: useFunnelStore.getState().language,
-        formData: {
-          ...answers,
-          consent_contact: answers.consent_contact === '1' ? 1 : 0,
-          consent_tracking: answers.consent_tracking === '1' ? 1 : 0,
-          discount_opt_in: answers.discount_opt_in === '1' ? 1 : 0,
-        }
-      };
-      // Mock API call for now
-      // const lead = await api<Lead>('/api/leads', {
-      //   method:'POST',
-      //   body:JSON.stringify(data)
-      // });
-      // navigate(`/result/${lead.id}`);
-      // reset();
-      console.log("Submitting data:", data);
-      toast.success("Check submitted successfully! (Mocked)");
-      // Mock navigation
-      setTimeout(() => {
-        navigate(`/result/mock-lead-id`);
-        reset();
-      }, 1000);
-    } catch(e) {
-      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-      toast.error(errorMessage);
-      console.error(e);
+      const lead = await api<Lead>('/api/leads', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      toast.success(t('app.submit_success', 'Erfolgreich eingereicht!'));
+      navigate(`/result/${lead.id}`);
+      reset();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : t('app.submit_error', 'Fehler beim Absenden');
+      toast.error(msg);
+      console.error('Submit error:', e);
     }
   };
   const renderStepContent = () => {
