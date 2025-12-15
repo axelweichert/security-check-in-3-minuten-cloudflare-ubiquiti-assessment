@@ -18,11 +18,11 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
       case 'radio':
         return (
           <RadioGroup onValueChange={onChange} value={value as string}>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {question.options?.map((option) => (
-                <div key={option.value} className="flex items-center space-x-3">
+                <div key={option.value} className="flex items-center space-x-2">
                   <RadioGroupItem value={option.value} id={`${question.id}-${option.value}`} />
-                  <Label htmlFor={`${question.id}-${option.value}`} className="font-normal">{t(option.labelKey)}</Label>
+                  <Label htmlFor={`${question.id}-${option.value}`}>{t(option.labelKey)}</Label>
                 </div>
               ))}
             </div>
@@ -43,7 +43,7 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
             </SelectContent>
           </Select>
         );
-      case 'checkbox': {
+      case 'checkbox':
         const handleCheckboxChange = (checked: boolean, optionValue: string) => {
           const currentValues = Array.isArray(value) ? value : [];
           if (checked) {
@@ -53,25 +53,24 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
           }
         };
         return (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {question.options?.map((option) => (
-              <div key={option.value} className="flex items-center space-x-3">
+              <div key={option.value} className="flex items-center space-x-2">
                 <Checkbox
                   id={`${question.id}-${option.value}`}
                   checked={Array.isArray(value) && value.includes(option.value)}
                   onCheckedChange={(checked) => handleCheckboxChange(!!checked, option.value)}
                 />
-                <Label htmlFor={`${question.id}-${option.value}`} className="font-normal">{t(option.labelKey)}</Label>
+                <Label htmlFor={`${question.id}-${option.value}`}>{t(option.labelKey)}</Label>
               </div>
             ))}
           </div>
         );
-      }
       case 'text':
       case 'email':
       case 'tel':
         return (
-            <Input
+            <Input 
                 type={question.type}
                 value={value as string || ''}
                 onChange={(e) => onChange(e.target.value)}
@@ -82,12 +81,8 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
         return null;
     }
   };
-  // For contact fields, don't wrap in a card, just render the input.
-  if (question.level === 5 && (question.type === 'text' || question.type === 'email' || question.type === 'tel' || question.type === 'select')) {
-    return renderInput();
-  }
   return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow">
+    <Card>
       <CardHeader>
         <CardTitle className="text-lg font-medium">{t(question.labelKey)}</CardTitle>
       </CardHeader>
