@@ -63,7 +63,7 @@ const submitSchema = z.object({
 const pdfTexts = {
   de: { header: 'Ihre Security-Auswertung', title: 'Auswertung für', risk: 'Risikolevel', risk_low: 'Niedriges Risiko', risk_medium: 'Mittleres Risiko', risk_high: 'Hohes Risiko', scores_title: 'Score-Übersicht', answers_title: 'Ihre Antworten', vpn: 'VPN', web: 'Web-Schutz', awareness: 'Awareness', stack: 'Tech Stack', zero_trust: 'Zero Trust', total: 'Gesamt', discount: '500€ Rabatt für Cloudflare Zero Trust Implementierung reserviert.', booking: 'Buchen Sie Ihren Beratungstermin:' },
   en: { header: 'Your Security Evaluation', title: 'Evaluation for', risk: 'Risk Level', risk_low: 'Low Risk', risk_medium: 'Medium Risk', risk_high: 'High Risk', scores_title: 'Score Overview', answers_title: 'Your Answers', vpn: 'VPN', web: 'Web Protection', awareness: 'Awareness', stack: 'Tech Stack', zero_trust: 'Zero Trust', total: 'Total', discount: '€500 discount for Cloudflare Zero Trust implementation reserved.', booking: 'Book your consultation:' },
-  fr: { header: 'Votre Évaluation de Sécurité', title: 'Évaluation pour', risk: 'Niveau de Risque', risk_low: 'Risque Faible', risk_medium: 'Risque Moyen', risk_high: 'Risque Élevé', scores_title: 'Aperçu du Score', answers_title: 'Vos Réponses', vpn: 'VPN', web: 'Protection Web', awareness: 'Sensibilisation', stack: 'Stack Tech', zero_trust: 'Zero Trust', total: 'Total', discount: '500€ de réduction réservés pour l\'implémentation de Cloudflare Zero Trust.', booking: 'Réservez votre consultation:' },
+  fr: { header: 'Votre Évaluation de Sécurit��', title: 'Évaluation pour', risk: 'Niveau de Risque', risk_low: 'Risque Faible', risk_medium: 'Risque Moyen', risk_high: 'Risque Élevé', scores_title: 'Aperçu du Score', answers_title: 'Vos Réponses', vpn: 'VPN', web: 'Protection Web', awareness: 'Sensibilisation', stack: 'Stack Tech', zero_trust: 'Zero Trust', total: 'Total', discount: '500€ de réduction réservés pour l\'implémentation de Cloudflare Zero Trust.', booking: 'Réservez votre consultation:' },
 };
 async function getFilteredLeads(c: any): Promise<LeadListItem[]> {
     const { items: rawLeads } = await LeadEntity.list(c.env, null, 1000);
@@ -171,23 +171,23 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const leadKeys = allKeys.filter(k => k.startsWith(leadId + '_'));
     const answers = await Promise.all(leadKeys.map(k => new LeadAnswerEntity(c.env, k).getState()));
     const doc = await PDFDocument.create();
-    const page = doc.addPage([595.28, 841.89]);
+    let page = doc.addPage([595.28, 841.89]);
     const { width, height } = page.getSize();
+    let currentY = height - 50;
     const font = await doc.embedFont(StandardFonts.Helvetica);
     const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
     const texts = pdfTexts[leadData.language as keyof typeof pdfTexts] || pdfTexts.de;
     const riskColors = { low: rgb(0.13, 0.77, 0.35), medium: rgb(0.96, 0.62, 0.04), high: rgb(0.94, 0.27, 0.27) };
     const riskColor = riskColors[scoreData.risk_level];
-    let y = height - 50;
-    page.drawText(texts.header, { x: 50, y, font: boldFont, size: 24 });
-    y -= 30;
-    page.drawText(`${texts.title} ${leadData.company_name}`, { x: 50, y, font, size: 12 });
-    y -= 40;
-    page.drawRectangle({ x: 50, y: y - 22, width: 150, height: 30, color: riskColor, opacity: 0.1, borderColor: riskColor, borderWidth: 1 });
-    page.drawText(`${texts.risk}: ${texts[`risk_${scoreData.risk_level}`]}`, { x: 60, y: y-15, font: boldFont, size: 14, color: riskColor });
-    y -= 60;
-    page.drawText(texts.scores_title, { x: 50, y, font: boldFont, size: 16 });
-    y -= 25;
+    page.drawText(texts.header, { x: 50, y: currentY, font: boldFont, size: 24 });
+    currentY -= 30;
+    page.drawText(`${texts.title} ${leadData.company_name}`, { x: 50, y: currentY, font, size: 12 });
+    currentY -= 40;
+    page.drawRectangle({ x: 50, y: currentY - 22, width: 150, height: 30, color: riskColor, opacity: 0.1, borderColor: riskColor, borderWidth: 1 });
+    page.drawText(`${texts.risk}: ${texts[`risk_${scoreData.risk_level}`]}`, { x: 60, y: currentY-15, font: boldFont, size: 14, color: riskColor });
+    currentY -= 60;
+    page.drawText(texts.scores_title, { x: 50, y: currentY, font: boldFont, size: 16 });
+    currentY -= 25;
     const scores = [
         { name: texts.vpn, value: scoreData.score_vpn, max: 2 },
         { name: texts.web, value: scoreData.score_web, max: 3 },
@@ -196,28 +196,38 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         { name: texts.zero_trust, value: scoreData.score_zero_trust, max: 2 },
     ];
     for (const score of scores) {
-        page.drawText(`${score.name}: ${score.value}/${score.max}`, { x: 60, y, font, size: 11 });
-        page.drawRectangle({ x: 200, y, width: 300, height: 10, color: rgb(0.9, 0.9, 0.9) });
-        page.drawRectangle({ x: 200, y, width: (score.value / score.max) * 300, height: 10, color: riskColor });
-        y -= 20;
+        page.drawText(`${score.name}: ${score.value}/${score.max}`, { x: 60, y: currentY, font, size: 11 });
+        page.drawRectangle({ x: 200, y: currentY, width: 300, height: 10, color: rgb(0.9, 0.9, 0.9) });
+        page.drawRectangle({ x: 200, y: currentY, width: (score.value / score.max) * 300, height: 10, color: riskColor });
+        currentY -= 20;
     }
-    y -= 20;
-    page.drawText(texts.answers_title, { x: 50, y, font: boldFont, size: 16 });
-    y -= 25;
+    currentY -= 20;
+    page.drawText(texts.answers_title, { x: 50, y: currentY, font: boldFont, size: 16 });
+    currentY -= 25;
     for (const answer of answers) {
-        if (y < 80) { page = doc.addPage(); y = height - 50; }
-        page.drawText(`${answer.question_key}:`, { x: 60, y, font: boldFont, size: 10 });
-        page.drawText(answer.answer_value, { x: 200, y, font, size: 10, maxWidth: 350 });
-        y -= 15;
+        if (currentY < 100) { 
+            page = doc.addPage(); 
+            currentY = height - 50; 
+        }
+        page.drawText(`${answer.question_key}:`, { x: 60, y: currentY, font: boldFont, size: 10 });
+        page.drawText(answer.answer_value, { x: 200, y: currentY, font, size: 10, maxWidth: 350 });
+        currentY -= 20;
     }
     if (leadData.discount_opt_in) {
-        if (y < 80) { page = doc.addPage(); y = height - 50; }
-        page.drawText(texts.discount, { x: 50, y, font: boldFont, size: 11, color: rgb(0.1, 0.5, 0.1) });
-        y -= 20;
+        if (currentY < 100) { 
+            page = doc.addPage(); 
+            currentY = height - 50; 
+        }
+        page.drawText(texts.discount, { x: 50, y: currentY, font: boldFont, size: 11, color: rgb(0.1, 0.5, 0.1) });
+        currentY -= 20;
+    }
+    if (currentY < 120) {
+        page = doc.addPage();
+        currentY = height - 50;
     }
     page.drawText('von Busch GmbH | HXNWRK | Cloudflare | Ubiquiti', { x: 50, y: 50, font, size: 9, color: rgb(0.5, 0.5, 0.5) });
     page.drawText(`${texts.booking} https://outlook.office.com/book/vonBuschGmbHCloudflare@vonbusch.digital/`, { x: 50, y: 35, font, size: 9, color: rgb(0.2, 0.4, 0.8) });
     const pdfBytes = await doc.save();
-    return new Response(pdfBytes, { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="Security-Check_${leadId}.pdf"` } });
+    return new Response(pdfBytes, { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="Security-Check-in-3-Minuten_${leadId}.pdf"` } });
   });
 }

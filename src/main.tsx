@@ -15,16 +15,11 @@ import { HomePage } from '@/pages/HomePage'
 import '@/lib/i18n'; // Initialize i18next
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { AdminSuspenseFallback } from '@/components/AdminSuspenseFallback';
 const queryClient = new QueryClient();
 const ResultPage = lazy(() => import('@/pages/ResultPage'));
 const AdminPage = lazy(() => import('@/pages/AdminPage'));
 const AdminLeadDetailPage = lazy(() => import('@/pages/AdminLeadDetailPage'));
-const AdminSuspenseFallback = () => (
-  <div className="p-8">
-    <Skeleton className="h-12 w-1/3 mb-8" />
-    <Skeleton className="h-64 w-full" />
-  </div>
-);
 const router = createBrowserRouter([
   {
     path: "/",
@@ -72,3 +67,5 @@ createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </StrictMode>,
 )
+// This satisfies the linter rule for fast refresh
+export {};
