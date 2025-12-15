@@ -77,7 +77,11 @@ function updateWranglerJsonc() {
 }
 
 function runSetupCommands() {
-    const commands = [];
+    const commands = [
+    "bun add i18next@^23.15.2",
+    "bun add react-i18next@^15.0.3",
+    "bun add pdf-lib@^1.17.1"
+];
     
     if (commands.length === 0) {
         console.log('⊘ No setup commands to run');
