@@ -13,6 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { api } from '@/lib/api-client';
 import type { GetLeadResponse } from '@shared/types';
 import { funnelQuestions, techStackQuestions, contactQuestions } from '@/lib/questions';
+import { toast } from 'sonner';
 const allQuestions = [...funnelQuestions, ...techStackQuestions, ...contactQuestions];
 const riskLevelClasses = {
   low: 'border-green-500/50 bg-green-500/10 text-green-400',
@@ -60,6 +61,31 @@ export default function ResultPage() {
       i18n.changeLanguage(data.lead.language);
     }
   }, [data, i18n]);
+  const handlePdfDownload = async () => {
+    if (!leadId) return;
+    const toastId = toast.loading(t('pdf.loading'));
+    try {
+      const response = await fetch(`/api/leads/${leadId}/pdf`, {
+        headers: { 'Cache-Control': 'no-cache' },
+      });
+      if (!response.ok) {
+        throw new Error('PDF generation failed');
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Security-Check-in-3-Minuten_${leadId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.dismiss(toastId);
+    } catch (err) {
+      console.error('PDF download error:', err);
+      toast.error(t('pdf.error'), { id: toastId });
+    }
+  };
   const getDisplayValue = (questionId: string, value: string): string => {
     const question = allQuestions.find(q => q.id === questionId);
     if (!question || value === null || value === undefined) return value || 'N/A';
@@ -152,10 +178,8 @@ export default function ResultPage() {
                 <Card className="shadow-md">
                     <CardHeader><CardTitle>{t('result.next_steps')}</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
-                        <Button asChild size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                            <a href={`/api/leads/${leadId}/pdf`} download={`Security-Check-in-3-Minuten_${leadId}.pdf`}>
-                                {t('result.pdf_btn')}
-                            </a>
+                        <Button size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handlePdfDownload}>
+                            {t('result.pdf_btn')}
                         </Button>
                         <Button asChild size="lg" variant="outline" className="w-full">
                             <a href="https://outlook.office.com/book/vonBuschGmbHCloudflare@vonbusch.digital/?ismsaljsauthenabled=true" target="_blank" rel="noopener noreferrer">

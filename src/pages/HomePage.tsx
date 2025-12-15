@@ -151,7 +151,7 @@ export function HomePage() {
                     </div>
                     <div className="flex items-start space-x-3">
                         <Checkbox id="discount_opt_in" checked={answers.discount_opt_in === '1'} onCheckedChange={(val) => setAnswer('discount_opt_in', val ? '1' : '0')} />
-                        <Label htmlFor="discount_opt_in" className="text-sm font-normal -mt-1">{t('consent.discount')}</Label>
+                        <Label htmlFor="discount_opt_in" className="text-sm font-bold -mt-1">{t('consent.discount')}</Label>
                     </div>
                 </CardContent>
             </Card>

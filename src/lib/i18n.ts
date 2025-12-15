@@ -103,6 +103,8 @@ const resources = {
       "consent.contact": "Ich stimme zu, dass die von Busch GmbH mich bezüglich meiner Anfrage kontaktieren darf. Diese Einwilligung kann jederzeit widerrufen werden.",
       "consent.tracking": "Ich stimme dem anonymen, DSGVO-konformen Tracking zu, um die Servicequalität zu verbessern (optional).",
       "consent.discount": "Ja, ich möchte mir den 500€ Rabatt auf eine Cloudflare Zero Trust Implementierung sichern (optional).",
+      "pdf.loading": "PDF wird erstellt...",
+      "pdf.error": "Fehler beim PDF-Download",
       // Result Page
       "result.title": "Ihre Security-Auswertung",
       "result.pdf_btn": "PDF generieren & herunterladen",
@@ -278,6 +280,8 @@ const resources = {
       "consent.contact": "I agree that von Busch GmbH may contact me regarding my inquiry. This consent can be revoked at any time.",
       "consent.tracking": "I agree to anonymous, GDPR-compliant tracking to improve service quality (optional).",
       "consent.discount": "Yes, I want to secure the €500 discount on a Cloudflare Zero Trust implementation (optional).",
+      "pdf.loading": "PDF is being created...",
+      "pdf.error": "PDF download error",
       // Result Page
       "result.title": "Your Security Evaluation",
       "result.pdf_btn": "Generate & Download PDF",
@@ -453,6 +457,8 @@ const resources = {
       "consent.contact": "J'accepte que von Busch GmbH me contacte concernant ma demande. Ce consentement peut être révoqué à tout moment.",
       "consent.tracking": "J'accepte le suivi anonyme et conforme au RGPD pour améliorer la qualité du service (optionnel).",
       "consent.discount": "Oui, je souhaite bénéficier de la réduction de 500 € sur une implémentation Cloudflare Zero Trust (optionnel).",
+      "pdf.loading": "PDF en cours de création...",
+      "pdf.error": "Erreur de téléchargement PDF",
       // Result Page
       "result.title": "Votre Évaluation de Sécurité",
       "result.pdf_btn": "Générer & Télécharger le PDF",
