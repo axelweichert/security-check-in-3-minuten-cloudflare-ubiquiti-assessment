@@ -16,7 +16,6 @@ import { funnelQuestions, techStackQuestions, contactQuestions, TOTAL_STEPS } fr
 import { api } from '@/lib/api-client';
 import type { Lead } from '@shared/types';
 import { Toaster, toast } from 'sonner';
-import { ClipboardList } from 'lucide-react';
 export function HomePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -167,13 +166,12 @@ export function HomePage() {
             className="text-center"
           >
             <Card className="p-8 md:p-12 shadow-lg">
-                <CardContent className="p-0 space-y-8">
-                    <div className="flex items-center justify-center gap-6">
-                        <ClipboardList className="h-10 w-10 md:h-12 md:w-12 text-primary flex-shrink-0" />
-                        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tighter text-gradient-primary">{t('app.title')}</h1>
+                <CardContent className="p-0 space-y-12">
+                    <div className="space-y-2 text-center">
+                        <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter bg-gradient-primary bg-clip-text text-transparent leading-tight">{t('app.title')}</h1>
+                        <p className="text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground/90 max-w-2xl mx-auto">{t('app.subtitle')}</p>
+                        <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">{t('app.hero_description')}</p>
                     </div>
-                    <p className="text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground/90 max-w-3xl mx-auto">{t('app.subtitle')}</p>
-                    <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">{t('app.hero_description')}</p>
                     <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} className="space-y-6 text-center max-w-md mx-auto">
                        <Card className="shadow-md border-primary/30 bg-accent/50 p-6 md:p-8 rounded-xl">
                          <CardContent className="p-0 space-y-3">
@@ -185,7 +183,7 @@ export function HomePage() {
                          </CardContent>
                        </Card>
                     </motion.div>
-                    <Button size="lg" className="mt-6 bg-primary hover:bg-primary/90 text-primary-foreground" onClick={nextStep}>
+                    <Button size="lg" className="mt-8 bg-primary hover:bg-primary/90 text-primary-foreground" onClick={nextStep}>
                       {t('app.start_check')}
                     </Button>
                 </CardContent>
