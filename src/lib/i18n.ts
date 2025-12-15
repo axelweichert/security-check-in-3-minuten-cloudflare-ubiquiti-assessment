@@ -34,7 +34,7 @@ const resources = {
       "q.infrastructure_resilience": "Wie schätzt du die Ausfallsicherheit deiner kritischen Infrastruktur ein?",
       "q.financial_damage_risk": "Welchen finanziellen Schaden würde ein 24-stündiger Ausfall deiner IT-Systeme ungefähr verursachen?",
       "q.firewall_vendor": "Welchen Firewall-Hersteller setzt du primär ein?",
-      "q.vpn_technology": "Welche VPN-Technologie wird hauptsächlich verwendet?",
+      "q.vpn_technology": "Welche VPN-Technologie wird haupts��chlich verwendet?",
       "q.zero_trust_vendor": "Setzt du bereits eine Zero-Trust-Lösung ein?",
       "o.yes": "Ja",
       "o.no": "Nein",
@@ -86,7 +86,18 @@ const resources = {
       "result.discount_msg": "500€ Preisnachlass auf Ihre erste Cloudflare Zero Trust Implementierung ist für Sie reserviert.",
       "result.risk.low": "Niedriges Risiko",
       "result.risk.medium": "Mittleres Risiko",
-      "result.risk.high": "Hohes Risiko"
+      "result.risk.high": "Hohes Risiko",
+      "score.vpn": "VPN",
+      "score.web": "Web-Schutz",
+      "score.awareness": "Awareness",
+      "score.stack": "Tech Stack",
+      "score.zero_trust": "Zero Trust",
+      "result.best_practice_title": "Best Practice Architektur",
+      "result.best_practice": "Ubiquiti Firewall + Cloudflare Zero Trust",
+      "result.answers_title": "Detaillierte Antworten",
+      "result.score_overview": "Score-Übersicht",
+      "result.next_steps": "Nächste Schritte",
+      "pdf.header": "Ihre Security-Auswertung"
     }
   },
   en: {
@@ -173,7 +184,18 @@ const resources = {
       "result.discount_msg": "A €500 discount on your first Cloudflare Zero Trust implementation has been reserved for you.",
       "result.risk.low": "Low Risk",
       "result.risk.medium": "Medium Risk",
-      "result.risk.high": "High Risk"
+      "result.risk.high": "High Risk",
+      "score.vpn": "VPN",
+      "score.web": "Web Protection",
+      "score.awareness": "Awareness",
+      "score.stack": "Tech Stack",
+      "score.zero_trust": "Zero Trust",
+      "result.best_practice_title": "Best Practice Architecture",
+      "result.best_practice": "Ubiquiti Firewall + Cloudflare Zero Trust",
+      "result.answers_title": "Detailed Answers",
+      "result.score_overview": "Score Overview",
+      "result.next_steps": "Next Steps",
+      "pdf.header": "Your Security Evaluation"
     }
   },
   fr: {
@@ -248,7 +270,7 @@ const resources = {
       "contact.contact_person": "Personne de contact",
       "contact.employee_count": "Nombre d'employés",
       "contact.email": "E-mail",
-      "contact.phone": "Numéro de tél��phone",
+      "contact.phone": "Numéro de téléphone",
       // Consents
       "consent.contact": "J'accepte que von Busch GmbH me contacte concernant ma demande. Ce consentement peut être révoqué à tout moment.",
       "consent.tracking": "J'accepte le suivi anonyme et conforme au RGPD pour améliorer la qualité du service (optionnel).",
@@ -260,7 +282,18 @@ const resources = {
       "result.discount_msg": "Une réduction de 500 € sur votre première implémentation Cloudflare Zero Trust vous a été réservée.",
       "result.risk.low": "Risque Faible",
       "result.risk.medium": "Risque Moyen",
-      "result.risk.high": "Risque Élevé"
+      "result.risk.high": "Risque Élevé",
+      "score.vpn": "VPN",
+      "score.web": "Protection Web",
+      "score.awareness": "Sensibilisation",
+      "score.stack": "Stack Tech",
+      "score.zero_trust": "Zero Trust",
+      "result.best_practice_title": "Architecture Recommandée",
+      "result.best_practice": "Pare-feu Ubiquiti + Cloudflare Zero Trust",
+      "result.answers_title": "Réponses Détaillées",
+      "result.score_overview": "Aperçu du Score",
+      "result.next_steps": "Prochaines Étapes",
+      "pdf.header": "Votre Évaluation de Sécurité"
     }
   }
 };

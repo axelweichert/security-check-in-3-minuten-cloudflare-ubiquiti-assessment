@@ -39,12 +39,14 @@ export interface Lead {
   done_at?: string | null;
 }
 export interface LeadAnswer {
+  id: string; // Required by IndexedEntity
   lead_id: string;
   question_key: string;
   answer_value: string;
   score_value: number;
 }
 export interface LeadScore {
+  id: string; // Required by IndexedEntity
   lead_id: string;
   score_vpn: number;
   score_web: number;
