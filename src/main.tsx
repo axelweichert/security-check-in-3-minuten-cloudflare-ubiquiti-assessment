@@ -2,7 +2,7 @@ import '@/lib/errorReporter';
 import { enableMapSet } from "immer";
 enableMapSet();
 import { StrictMode, lazy, Suspense } from 'react'
-import { createRoot } from 'react-dom/client'
+import { createRoot, Root } from 'react-dom/client'
 import {
   createBrowserRouter,
   RouterProvider,
@@ -13,7 +13,6 @@ import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
 import '@/index.css'
 import { HomePage } from '@/pages/HomePage'
 import '@/lib/i18n'; // Initialize i18next
-import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AdminSuspenseFallback } from '@/components/AdminSuspenseFallback';
 const queryClient = new QueryClient();
@@ -29,7 +28,7 @@ const router = createBrowserRouter([
   {
     path: "/result/:leadId",
     element: (
-      <Suspense fallback={<div className="w-full h-screen flex items-center justify-center"><Skeleton className="h-64 w-full max-w-2xl" /></div>}>
+      <Suspense fallback={<AdminSuspenseFallback />}>
         <ResultPage />
       </Suspense>
     ),
@@ -58,14 +57,22 @@ const router = createBrowserRouter([
     errorElement: <RouteErrorBoundary />,
   },
 ]);
-createRoot(document.getElementById('root')!).render(
+const container = document.getElementById('root')!;
+let root: Root | null = null;
+const App = () => (
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
         <RouterProvider router={router} />
       </ErrorBoundary>
     </QueryClientProvider>
-  </StrictMode>,
-)
+  </StrictMode>
+);
+if (container) {
+  if (!root) {
+    root = createRoot(container);
+  }
+  root.render(<App />);
+}
 // This satisfies the linter rule for fast refresh
 export {};

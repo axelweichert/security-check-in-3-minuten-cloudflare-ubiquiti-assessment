@@ -6,16 +6,24 @@ import { useFunnelStore } from '@/store/funnel-store';
 import { Header } from '@/components/layout/Header';
 import { FunnelStep } from '@/components/funnel/FunnelStep';
 import { QuestionCard } from '@/components/funnel/QuestionCard';
+import { Stepper } from '@/components/funnel/Stepper';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { funnelQuestions, techStackQuestions, contactQuestions, TOTAL_STEPS } from '@/lib/questions';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Lock, Globe, Users, Server, UserCheck } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import type { Lead } from '@shared/types';
 import { Toaster, toast } from 'sonner';
+import { cn } from '@/lib/utils';
+const questionIcons: Record<string, React.ReactNode> = {
+    vpn_in_use: <Lock className="h-8 w-8 text-primary" />,
+    critical_processes_on_website: <Globe className="h-8 w-8 text-primary" />,
+    awareness_training: <Users className="h-8 w-8 text-primary" />,
+    tech_stack: <Server className="h-8 w-8 text-primary" />,
+    contact: <UserCheck className="h-8 w-8 text-primary" />,
+};
 export function HomePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -33,7 +41,6 @@ export function HomePage() {
       setLanguage(urlLang);
     }
   }, [i18n, setLanguage]);
-  const progressValue = (currentStep / TOTAL_STEPS) * 100;
   const isStepComplete = useMemo(() => {
     if (currentStep === 0) return true;
     let questionsForStep;
@@ -68,8 +75,8 @@ export function HomePage() {
   }, [currentStep, answers]);
   const handleSubmit = async () => {
     try {
-      const data = { 
-        language: useFunnelStore.getState().language, 
+      const data = {
+        language: useFunnelStore.getState().language,
         formData: {
           ...answers,
           consent_contact: answers.consent_contact === '1' ? '1' : '0',
@@ -78,7 +85,7 @@ export function HomePage() {
         }
       };
       const lead = await api<Lead>('/api/leads', {
-        method:'POST', 
+        method:'POST',
         body:JSON.stringify(data)
       });
       navigate(`/result/${lead.id}`);
@@ -112,7 +119,7 @@ export function HomePage() {
             isNextDisabled={!isStepComplete}
           >
             {getVisibleQuestions(currentStep).map((q) => (
-              <QuestionCard key={q.id} question={q} value={answers[q.id] || (q.type === 'checkbox' ? [] : '')} onChange={(val) => setAnswer(q.id, val)} />
+              <QuestionCard key={q.id} question={q} value={answers[q.id] || (q.type === 'checkbox' ? [] : '')} onChange={(val) => setAnswer(q.id, val)} icon={questionIcons[q.id]} />
             ))}
           </FunnelStep>
         );
@@ -120,7 +127,7 @@ export function HomePage() {
         return (
           <FunnelStep title={t('step.tech_stack.title')} onNext={nextStep} onBack={prevStep} isNextDisabled={!isStepComplete}>
             {techStackQuestions.map((q) => (
-              <QuestionCard key={q.id} question={q} value={answers[q.id] || ''} onChange={(val) => setAnswer(q.id, val)} />
+              <QuestionCard key={q.id} question={q} value={answers[q.id] || ''} onChange={(val) => setAnswer(q.id, val)} icon={questionIcons['tech_stack']} />
             ))}
           </FunnelStep>
         );
@@ -128,7 +135,7 @@ export function HomePage() {
         return (
           <FunnelStep title={t('step.contact.title')} onNext={handleSubmit} onBack={prevStep} isLastStep isNextDisabled={!isStepComplete}>
             <Card>
-                <CardHeader><CardTitle>{t('step.contact.title')}</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="flex items-center gap-4">{questionIcons['contact']} {t('step.contact.title')}</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                     {contactQuestions.map((q) => (
                         <div key={q.id}>
@@ -165,17 +172,20 @@ export function HomePage() {
             transition={{ duration: 0.5 }}
             className="text-center"
           >
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">{t('app.title')}</h1>
-            <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">{t('app.subtitle')}</p>
-            <Button size="lg" className="mt-8 bg-[#F48120] hover:bg-[#F48120]/90 text-white" onClick={nextStep}>
-              {t('app.start_check')}
-            </Button>
-            <div className="mt-6 text-sm text-muted-foreground">
-              <p>{t('app.germany_attacked_info')}</p>
-              <a href="https://radar.cloudflare.com/de-de/reports/ddos-2025-q3" target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-orange-500 hover:underline">
-                {t('app.discover_report')}
-                <ExternalLink className="ml-1 h-4 w-4" />
-              </a>
+            <img src="https://imagedelivery.net/3_b412f08-sU2i2-0h-oQ/21b6e412-5d61-4343-2615-6c615c890100/public" alt="Security Illustration" className="w-full max-w-3xl mx-auto mb-8 rounded-2xl shadow-2xl shadow-primary/10" />
+            <div className="cyber-hero p-8 rounded-2xl max-w-3xl mx-auto">
+                <h1 className="text-display-cyber text-gradient-primary">{t('app.title')}</h1>
+                <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">{t('app.subtitle')}</p>
+                <Button size="lg" className="mt-8 btn-cyber" onClick={nextStep}>
+                  {t('app.start_check')}
+                </Button>
+                <div className="mt-6 text-sm text-muted-foreground">
+                  <p>{t('app.germany_attacked_info')}</p>
+                  <a href="https://radar.cloudflare.com/de-de/reports/ddos-2025-q3" target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-primary hover:underline">
+                    {t('app.discover_report')}
+                    <ExternalLink className="ml-1 h-4 w-4" />
+                  </a>
+                </div>
             </div>
           </motion.div>
         );
@@ -186,14 +196,15 @@ export function HomePage() {
       <Toaster richColors />
       <Header />
       <main className="flex-grow flex flex-col items-center justify-center p-4">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="py-8 md:py-10 lg:py-12">
+        <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="py-12">
             <div className="w-full max-w-4xl mx-auto">
               {currentStep > 0 && (
-                <div className="mb-8">
-                  <Progress value={progressValue} className="w-full [&>div]:bg-orange-500" />
-                  <p className="text-center text-sm text-muted-foreground mt-2">Schritt {currentStep} von {TOTAL_STEPS}</p>
-                </div>
+                <Stepper
+                  currentStep={currentStep}
+                  totalSteps={TOTAL_STEPS}
+                  labels={[t('step.level_1.title'), t('step.level_2.title'), t('step.level_3.title'), t('step.tech_stack.title'), t('step.contact.title')]}
+                />
               )}
               <AnimatePresence mode="wait">
                 <div key={currentStep} className="flex justify-center">
