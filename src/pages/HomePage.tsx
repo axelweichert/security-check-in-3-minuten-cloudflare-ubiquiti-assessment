@@ -166,10 +166,11 @@ export function HomePage() {
             className="text-center"
           >
             <Card className="p-8 md:p-12 shadow-lg">
-                <CardContent className="p-0 space-y-6">
+                <CardContent className="p-0 space-y-8">
                     <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tighter text-gradient-primary">{t('app.title')}</h1>
-                    <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">{t('app.subtitle')}</p>
-                    <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} className="space-y-3 text-center max-w-md mx-auto">
+                    <p className="text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground/90 max-w-3xl mx-auto">{t('app.subtitle')}</p>
+                    <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">{t('app.hero_description')}</p>
+                    <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} className="space-y-6 text-center max-w-md mx-auto">
                        <Card className="shadow-md border-primary/30 bg-accent/50 p-6 md:p-8 rounded-xl">
                          <CardContent className="p-0 space-y-3">
                            <h3 className="text-2xl font-bold text-foreground">{t('app.germany_attacked_info')}</h3>

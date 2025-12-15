@@ -7,6 +7,7 @@ const resources = {
       // General
       "app.title": "Security Check in 3 Minuten",
       "app.subtitle": "Wie widerstandsfähig ist dein Unternehmen gegen Cyberangriffe?",
+      "app.hero_description": "Kurzer 3-Stufen-Check zu VPN, Web-Anwendungen und Mitarbeiter-Sicherheit – mit konkreten Handlungsempfehlungen.",
       "app.discover_report": "Cloudflare DDoS Threat Report Q3-2025 entdecken",
       "app.start_check": "Jetzt Security-Check starten",
       "app.germany_attacked_info": "Deutschland ist das drittmeist angegriffene Land der Welt im Cyberspace.",
@@ -35,7 +36,7 @@ const resources = {
       "q.security_incidents": "Hatte dein Unternehmen in den letzten 24 Monaten einen meldepflichtigen Security-Vorfall?",
       "q.remote_access_satisfaction": "Wie zufrieden bist du mit der aktuellen Remote-Access-Lösung (VPN)?",
       "q.infrastructure_resilience": "Wie schätzt du die Ausfallsicherheit deiner kritischen Infrastruktur ein?",
-      "q.financial_damage_risk": "Welchen finanziellen Schaden würde ein 24-st��ndiger Ausfall deiner IT-Systeme ungefähr verursachen?",
+      "q.financial_damage_risk": "Welchen finanziellen Schaden würde ein 24-stündiger Ausfall deiner IT-Systeme ungefähr verursachen?",
       "q.firewall_vendor": "Welchen Firewall-Hersteller setzt du primär ein?",
       "q.vpn_technology": "Welche VPN-Technologie wird hauptsächlich verwendet?",
       "q.zero_trust_vendor": "Setzt du bereits eine Zero-Trust-Lösung ein?",
@@ -141,7 +142,7 @@ const resources = {
       "admin.filters.discount.yes": "Ja",
       "admin.filters.discount.no": "Nein",
       "admin.filters.apply": "Anwenden",
-      "admin.filters.clear": "Zurücksetzen",
+      "admin.filters.clear": "Zur��cksetzen",
       "admin.export_csv": "CSV Exportieren",
       "admin.table.company": "Firma",
       "admin.table.contact": "Kontakt",
@@ -158,7 +159,7 @@ const resources = {
       "admin.detail.answers": "Antworten",
       "admin.detail.status_card": "Status",
       "admin.detail.mark_done": "Als erledigt markieren",
-      "utf8_test": "Alfred-Bozi-Straße 12 ��� 33602 Bielefeld | Sichere dir 500€ Preisnachlass | Contrôle de Sécurité en 3 Minutes | Sécurité, confidentialité, accès € é ç ß ä ö ü"
+      "utf8_test": "Alfred-Bozi-Straße 12 – 33602 Bielefeld | Sichere dir 500€ Preisnachlass | Contrôle de Sécurité en 3 Minutes | Sécurité, confidentialité, accès € é ç ß ä ö ü"
     }
   },
   en: {
@@ -166,6 +167,7 @@ const resources = {
       // General
       "app.title": "Security Check in 3 Minutes",
       "app.subtitle": "How resilient is your company against cyber attacks?",
+      "app.hero_description": "Short 3-step check on VPN, web apps, and employee security – with concrete recommendations.",
       "app.discover_report": "Discover the Cloudflare DDoS Threat Report Q3-2025",
       "app.start_check": "Start Security Check Now",
       "app.germany_attacked_info": "Germany is the third most attacked country in the world in cyberspace.",
@@ -325,6 +327,7 @@ const resources = {
       // General
       "app.title": "Bilan de Sécurité en 3 Minutes",
       "app.subtitle": "Quelle est la résilience de votre entreprise face aux cyberattaques ?",
+      "app.hero_description": "Vérification rapide en 3 étapes sur VPN, applications web et sécurité des employés – avec recommandations concrètes.",
       "app.discover_report": "Découvrir le rapport sur les menaces DDoS de Cloudflare Q3-2025",
       "app.start_check": "Démarrer le Bilan de Sécurité",
       "app.germany_attacked_info": "L'Allemagne est le troisième pays le plus attaqué au monde dans le cyberespace.",
@@ -415,11 +418,11 @@ const resources = {
       "contact.contact_person": "Personne de contact",
       "contact.employee_count": "Nombre d'employés",
       "contact.email": "E-mail",
-      "contact.phone": "Numéro de t��léphone",
+      "contact.phone": "Numéro de téléphone",
       // Consents
       "consent.contact": "J'accepte que von Busch GmbH me contacte concernant ma demande. Ce consentement peut être révoqué à tout moment.",
       "consent.tracking": "J'accepte le suivi anonyme et conforme au RGPD pour améliorer la qualité du service (optionnel).",
-      "consent.discount": "Oui, je souhaite bénéficier de la réduction de 500 € sur une impl��mentation Cloudflare Zero Trust (optionnel).",
+      "consent.discount": "Oui, je souhaite bénéficier de la réduction de 500 € sur une implémentation Cloudflare Zero Trust (optionnel).",
       // Result Page
       "result.title": "Votre Évaluation de Sécurité",
       "result.pdf_btn": "Générer & Télécharger le PDF",
@@ -476,7 +479,7 @@ const resources = {
       "admin.detail.answers": "Réponses",
       "admin.detail.status_card": "Statut",
       "admin.detail.mark_done": "Marquer comme terminé",
-      "utf8_test": "Alfred-Bozi-Straße 12 ��� 33602 Bielefeld | Sécurisez votre réduction de 500€ | Contrôle de Sécurité en 3 Minutes | Sécurité, confidentialité, accès € é ç ß ä ö ü"
+      "utf8_test": "Alfred-Bozi-Straße 12 – 33602 Bielefeld | Sécurisez votre réduction de 500€ | Contrôle de Sécurité en 3 Minutes | Sécurité, confidentialité, accès € é ç ß ä ö ü"
     }
   }
 };
