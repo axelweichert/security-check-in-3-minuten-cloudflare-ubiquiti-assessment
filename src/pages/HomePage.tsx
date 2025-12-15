@@ -16,6 +16,7 @@ import { funnelQuestions, techStackQuestions, contactQuestions, TOTAL_STEPS } fr
 import { api } from '@/lib/api-client';
 import type { Lead } from '@shared/types';
 import { Toaster, toast } from 'sonner';
+import { ClipboardList } from 'lucide-react';
 export function HomePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -167,7 +168,10 @@ export function HomePage() {
           >
             <Card className="p-8 md:p-12 shadow-lg">
                 <CardContent className="p-0 space-y-8">
-                    <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tighter text-gradient-primary">{t('app.title')}</h1>
+                    <div className="flex items-center justify-center gap-6">
+                        <ClipboardList className="h-10 w-10 md:h-12 md:w-12 text-primary flex-shrink-0" />
+                        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tighter text-gradient-primary">{t('app.title')}</h1>
+                    </div>
                     <p className="text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground/90 max-w-3xl mx-auto">{t('app.subtitle')}</p>
                     <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">{t('app.hero_description')}</p>
                     <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} className="space-y-6 text-center max-w-md mx-auto">

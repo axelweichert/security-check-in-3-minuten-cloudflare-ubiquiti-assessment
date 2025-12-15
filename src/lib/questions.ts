@@ -227,3 +227,4 @@ export const contactQuestions: Question[] = [
     { id: 'phone', level: 5, type: 'tel', labelKey: 'contact.phone', required: true },
 ];
 export const TOTAL_STEPS = 5;
+export const allQuestions = [...funnelQuestions, ...techStackQuestions, ...contactQuestions];
