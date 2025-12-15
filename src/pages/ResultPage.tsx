@@ -1,52 +1,33 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Download, Calendar } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import type { GetLeadResponse } from '@shared/types';
-import { funnelQuestions, techStackQuestions, contactQuestions } from '@/lib/questions';
-import { toast } from 'sonner';
-const allQuestions = [...funnelQuestions, ...techStackQuestions, ...contactQuestions];
-const riskLevelClasses = {
-  low: 'border-green-500/50 bg-green-500/10 text-green-400',
-  medium: 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400',
-  high: 'border-red-500/50 bg-red-500/10 text-red-400',
-};
-type ScoreStatus = 'poor' | 'medium' | 'good';
-const getScoreStatus = (score: number, maxScore: number): ScoreStatus => {
-  const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
-  if (percentage >= 75) return 'good';
-  if (percentage >= 40) return 'medium';
-  return 'poor';
-};
-const ScoreBreakdownCard = ({ title, status, explanation }: { title: string, status: ScoreStatus, explanation: string }) => {
-  const { t } = useTranslation();
-  const statusColors: Record<ScoreStatus, string> = {
-    poor: 'bg-red-500/10 text-red-400 border-red-500/20',
-    medium: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-    good: 'bg-green-500/10 text-green-400 border-green-500/20',
-  };
-  return (
-    <Card className="shadow-sm">
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-lg font-semibold">{title}</CardTitle>
-          <Badge variant="outline" className={`font-bold ${statusColors[status]}`}>{t(`score.status.${status}`)}</Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <p className="text-muted-foreground text-sm">{explanation}</p>
-      </CardContent>
-    </Card>
-  );
+const riskLevelColors = {
+  low: {
+    bg: 'bg-green-100 dark:bg-green-900/50',
+    text: 'text-green-800 dark:text-green-200',
+    bar: '#22c55e', // green-500
+  },
+  medium: {
+    bg: 'bg-yellow-100 dark:bg-yellow-900/50',
+    text: 'text-yellow-800 dark:text-yellow-200',
+    bar: '#f59e0b', // amber-500
+  },
+  high: {
+    bg: 'bg-red-100 dark:bg-red-900/50',
+    text: 'text-red-800 dark:text-red-200',
+    bar: '#ef4444', // red-500
+  },
 };
 export default function ResultPage() {
   const { leadId } = useParams<{ leadId: string }>();
@@ -61,159 +42,116 @@ export default function ResultPage() {
       i18n.changeLanguage(data.lead.language);
     }
   }, [data, i18n]);
-  const handlePdfDownload = async () => {
-    if (!leadId) return;
-    const toastId = toast.loading(t('pdf.loading'));
-    try {
-      const response = await fetch(`/api/leads/${leadId}/pdf`, {
-        headers: { 'Cache-Control': 'no-cache' },
-      });
-      if (!response.ok) {
-        throw new Error('PDF generation failed');
-      }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Security-Check-in-3-Minuten_${leadId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-      toast.dismiss(toastId);
-    } catch (err) {
-      console.error('PDF download error:', err);
-      toast.error(t('pdf.error'), { id: toastId });
-    }
-  };
-  const getDisplayValue = (questionId: string, value: string): string => {
-    const question = allQuestions.find(q => q.id === questionId);
-    if (!question || value === null || value === undefined) return value || 'N/A';
-    if (question.type === 'checkbox') {
-      const values = value.split(', ');
-      return values.map(v => {
-        const option = question.options?.find(o => o.value === v);
-        return option ? t(option.labelKey) : v;
-      }).join(', ');
-    }
-    const option = question.options?.find(o => o.value === value);
-    return option ? t(option.labelKey) : value;
-  };
-  const { riskClasses, answerMap } = useMemo(() => {
-    if (!data) return { riskClasses: riskLevelClasses.high, answerMap: new Map() };
-    const { scores, answers } = data;
-    const riskClasses = riskLevelClasses[scores.risk_level] || riskLevelClasses.high;
-    const answerMap = new Map(answers.map(a => [a.question_key, a.answer_value]));
-    return { riskClasses, answerMap };
-  }, [data]);
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col">
         <Header />
-        <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="py-8 md:py-10 lg:py-12 space-y-8">
-            <Skeleton className="h-48 w-full rounded-xl" />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Skeleton className="h-32 w-full rounded-xl" />
-              <Skeleton className="h-32 w-full rounded-xl" />
-              <Skeleton className="h-32 w-full rounded-xl" />
+        <main className="flex-grow">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-8 md:py-10 lg:py-12 space-y-8">
+              <Skeleton className="h-24 w-full" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <Skeleton className="h-64 w-full" />
+                <Skeleton className="h-64 w-full" />
+              </div>
             </div>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center">
         <Header />
-        <main className="flex-grow flex items-center justify-center text-center p-4">
-            <div>
-                <h2 className="text-2xl font-bold text-destructive">{t('result.error_title', 'Error Loading Results')}</h2>
-                <p className="text-muted-foreground mt-2">{error?.message || t('result.error_message', 'The requested lead could not be found.')}</p>
-            </div>
-        </main>
-        <Footer />
+        <h2 className="text-2xl font-bold text-destructive">Error loading results.</h2>
+        <p className="text-muted-foreground">{error?.message || 'The requested lead could not be found.'}</p>
       </div>
     );
   }
-  const { lead, scores } = data;
-  const vpnStatus = getScoreStatus(scores.score_vpn, 2);
-  const webStatus = getScoreStatus(scores.score_web, 3);
-  const awarenessStatus = getScoreStatus(scores.score_awareness, 2);
+  const { lead, scores, answers } = data;
+  const riskColors = riskLevelColors[scores.risk_level] || riskLevelColors.high;
+  const chartData = [
+    { name: 'VPN', score: scores.score_vpn, max: 2 },
+    { name: 'Web', score: scores.score_web, max: 3 },
+    { name: 'Awareness', score: scores.score_awareness, max: 1 },
+    { name: 'Stack', score: scores.score_stack, max: 6 },
+    { name: 'Zero Trust', score: scores.score_zero_trust, max: 2 },
+  ];
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Header />
       <main className="flex-grow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-8 md:py-10 lg:py-12 space-y-8">
+          <div className="py-8 md:py-10 lg:py-12">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <Card className="shadow-md border-border/60">
-                <CardContent className="text-center p-8 md:p-12">
-                  <p className="text-base font-medium text-muted-foreground">{t('result.title')}</p>
-                  <p className="text-2xl font-semibold mt-1">{lead.company_name}</p>
-                  <div className="mt-6 text-7xl md:text-8xl font-black tracking-tighter text-gradient-primary">
-                    {scores.score_total}%
+              <Card className={`overflow-hidden ${riskColors.bg}`}>
+                <CardHeader>
+                  <CardTitle className="text-3xl md:text-4xl font-bold text-center">{t('result.title')}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-center pb-8">
+                  <p className="text-lg text-muted-foreground">Für {lead.company_name}</p>
+                  <div className="mt-4">
+                    <Badge variant="outline" className={`text-2xl font-semibold px-6 py-2 rounded-full border-2 ${riskColors.text} border-current`}>
+                      {t(`result.risk.${scores.risk_level}`)}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className={`mt-4 text-lg font-semibold px-6 py-2 rounded-full border-2 ${riskClasses}`}>
-                    {t(`result.risk.${scores.risk_level}`)}
-                  </Badge>
+                  <p className="mt-4 text-5xl md:text-7xl font-bold tracking-tighter ${riskColors.text}">
+                    {scores.score_total}%
+                  </p>
+                  <p className="text-muted-foreground">Gesamt-Score</p>
                 </CardContent>
               </Card>
             </motion.div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <ScoreBreakdownCard title={t('score.vpn_title')} status={vpnStatus} explanation={t(`score.vpn.${vpnStatus}.explain`)} />
-                <ScoreBreakdownCard title={t('score.web_title')} status={webStatus} explanation={t(`score.web.${webStatus}.explain`)} />
-                <ScoreBreakdownCard title={t('score.awareness_title')} status={awarenessStatus} explanation={t(`score.awareness.${awarenessStatus}.explain`)} />
-            </div>
             {lead.discount_opt_in === 1 && (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
-                <div className="p-4 text-center bg-primary/10 text-primary rounded-lg border border-primary/20">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
+                <div className="mt-8 p-4 text-center bg-primary text-primary-foreground rounded-lg">
                   <p className="font-semibold">{t('result.discount_msg')}</p>
                 </div>
               </motion.div>
             )}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <Card className="shadow-md">
-                    <CardHeader><CardTitle>{t('result.next_steps')}</CardTitle></CardHeader>
-                    <CardContent className="space-y-4">
-                        <Button size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handlePdfDownload}>
-                            {t('result.pdf_btn')}
-                        </Button>
-                        <Button asChild size="lg" variant="outline" className="w-full">
-                            <a href="https://outlook.office.com/book/vonBuschGmbHCloudflare@vonbusch.digital/?ismsaljsauthenabled=true" target="_blank" rel="noopener noreferrer">
-                            {t('result.book_btn')}
-                            </a>
-                        </Button>
-                    </CardContent>
+            <div className="mt-8 grid grid-cols-1 lg:grid-cols-5 gap-8">
+              <motion.div className="lg:col-span-3" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
+                <Card>
+                  <CardHeader><CardTitle>Score-��bersicht</CardTitle></CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" domain={[0, dataMax => Math.max(dataMax, 2)]} />
+                        <YAxis dataKey="name" type="category" width={80} />
+                        <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} contentStyle={{ backgroundColor: 'hsl(var(--background))' }} />
+                        <Bar dataKey="score" fill={riskColors.bar}>
+                          {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={riskColors.bar} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
                 </Card>
-                <Card className="shadow-md">
-                    <Accordion type="single" collapsible className="w-full">
-                        <AccordionItem value="answers">
-                            <AccordionTrigger className="px-6 text-lg font-semibold">{t('result.answers_title')}</AccordionTrigger>
-                            <AccordionContent className="px-6 pt-2">
-                            <div className="space-y-2 text-sm">
-                                {allQuestions.map(q => {
-                                const answer = answerMap.get(q.id);
-                                if (!answer) return null;
-                                return (
-                                    <div key={q.id} className="flex justify-between items-start p-2 rounded-md hover:bg-accent">
-                                    <span className="font-medium text-muted-foreground mr-4">{t(q.labelKey)}:</span>
-                                    <span className="text-right font-semibold">{getDisplayValue(q.id, answer)}</span>
-                                    </div>
-                                );
-                                })}
-                            </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                    </Accordion>
+              </motion.div>
+              <motion.div className="lg:col-span-2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.6 }}>
+                <Card>
+                  <CardHeader><CardTitle>Nächste Schritte</CardTitle></CardHeader>
+                  <CardContent className="space-y-4">
+                    <Button size="lg" className="w-full bg-[#F48120] hover:bg-[#F48120]/90 text-white">
+                      <Download className="mr-2 h-5 w-5" />
+                      {t('result.pdf_btn')}
+                    </Button>
+                    <Button asChild size="lg" variant="outline" className="w-full">
+                      <a href="https://outlook.office.com/book/vonBuschGmbHCloudflare@vonbusch.digital/?ismsaljsauthenabled=true" target="_blank" rel="noopener noreferrer">
+                        <Calendar className="mr-2 h-5 w-5" />
+                        {t('result.book_btn')}
+                      </a>
+                    </Button>
+                  </CardContent>
                 </Card>
+              </motion.div>
             </div>
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

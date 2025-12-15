@@ -14,6 +14,7 @@ const resources = {
       "app.next": "Weiter",
       "app.submit": "Absenden & Auswertung erhalten",
       "app.required_field": "Dieses Feld ist erforderlich",
+      "app.select_option": "Option auswählen",
       // Steps
       "step.level_1.title": "Level 1: Basis-Sicherheit",
       "step.level_2.title": "Level 2: Technische Details",
@@ -65,6 +66,9 @@ const resources = {
       "o.25k_to_100k": "25.000 € bis 100.000 €",
       "o.more_than_100k": "Mehr als 100.000 €",
       "o.no_vpn": "Keine",
+      "o.vpn_firewall_integrated": "Firewall-integriertes VPN",
+      "o.vpn_dedicated": "Dedizierte VPN-Lösung",
+      "o.vpn_cloud": "Cloud-basierter VPN-Service",
       // Contact Form
       "contact.company_name": "Firmenname",
       "contact.contact_person": "Ansprechpartner",
@@ -74,7 +78,15 @@ const resources = {
       // Consents
       "consent.contact": "Ich stimme zu, dass die von Busch GmbH mich bezüglich meiner Anfrage kontaktieren darf. Diese Einwilligung kann jederzeit widerrufen werden.",
       "consent.tracking": "Ich stimme dem anonymen, DSGVO-konformen Tracking zu, um die Servicequalität zu verbessern (optional).",
-      "consent.discount": "Ja, ich möchte mir den 500€ Rabatt auf eine Cloudflare Zero Trust Implementierung sichern (optional)."
+      "consent.discount": "Ja, ich möchte mir den 500€ Rabatt auf eine Cloudflare Zero Trust Implementierung sichern (optional).",
+      // Result Page
+      "result.title": "Ihre Security-Auswertung",
+      "result.pdf_btn": "PDF generieren & herunterladen",
+      "result.book_btn": "Termin direkt buchen",
+      "result.discount_msg": "500€ Preisnachlass auf Ihre erste Cloudflare Zero Trust Implementierung ist für Sie reserviert.",
+      "result.risk.low": "Niedriges Risiko",
+      "result.risk.medium": "Mittleres Risiko",
+      "result.risk.high": "Hohes Risiko"
     }
   },
   en: {
@@ -89,6 +101,7 @@ const resources = {
       "app.next": "Next",
       "app.submit": "Submit & Get Evaluation",
       "app.required_field": "This field is required",
+      "app.select_option": "Select an option",
       // Steps
       "step.level_1.title": "Level 1: Basic Security",
       "step.level_2.title": "Level 2: Technical Details",
@@ -140,6 +153,9 @@ const resources = {
       "o.25k_to_100k": "€25,000 to €100,000",
       "o.more_than_100k": "More than €100,000",
       "o.no_vpn": "None",
+      "o.vpn_firewall_integrated": "Firewall-integrated VPN",
+      "o.vpn_dedicated": "Dedicated VPN Solution",
+      "o.vpn_cloud": "Cloud-based VPN Service",
       // Contact Form
       "contact.company_name": "Company Name",
       "contact.contact_person": "Contact Person",
@@ -149,7 +165,15 @@ const resources = {
       // Consents
       "consent.contact": "I agree that von Busch GmbH may contact me regarding my inquiry. This consent can be revoked at any time.",
       "consent.tracking": "I agree to anonymous, GDPR-compliant tracking to improve service quality (optional).",
-      "consent.discount": "Yes, I want to secure the €500 discount on a Cloudflare Zero Trust implementation (optional)."
+      "consent.discount": "Yes, I want to secure the €500 discount on a Cloudflare Zero Trust implementation (optional).",
+      // Result Page
+      "result.title": "Your Security Evaluation",
+      "result.pdf_btn": "Generate & Download PDF",
+      "result.book_btn": "Book Appointment Directly",
+      "result.discount_msg": "A €500 discount on your first Cloudflare Zero Trust implementation has been reserved for you.",
+      "result.risk.low": "Low Risk",
+      "result.risk.medium": "Medium Risk",
+      "result.risk.high": "High Risk"
     }
   },
   fr: {
@@ -164,6 +188,7 @@ const resources = {
       "app.next": "Suivant",
       "app.submit": "Soumettre et Obtenir l'Évaluation",
       "app.required_field": "Ce champ est requis",
+      "app.select_option": "Sélectionnez une option",
       // Steps
       "step.level_1.title": "Niveau 1 : Sécurité de Base",
       "step.level_2.title": "Niveau 2 : Détails Techniques",
@@ -215,16 +240,27 @@ const resources = {
       "o.25k_to_100k": "25 000 € à 100 000 €",
       "o.more_than_100k": "Plus de 100 000 €",
       "o.no_vpn": "Aucun",
+      "o.vpn_firewall_integrated": "VPN intégré au pare-feu",
+      "o.vpn_dedicated": "Solution VPN dédiée",
+      "o.vpn_cloud": "Service VPN basé sur le cloud",
       // Contact Form
       "contact.company_name": "Nom de l'entreprise",
       "contact.contact_person": "Personne de contact",
       "contact.employee_count": "Nombre d'employés",
       "contact.email": "E-mail",
-      "contact.phone": "Numéro de téléphone",
+      "contact.phone": "Numéro de tél��phone",
       // Consents
       "consent.contact": "J'accepte que von Busch GmbH me contacte concernant ma demande. Ce consentement peut être révoqué à tout moment.",
       "consent.tracking": "J'accepte le suivi anonyme et conforme au RGPD pour améliorer la qualité du service (optionnel).",
-      "consent.discount": "Oui, je souhaite bén��ficier de la réduction de 500 € sur une implémentation Cloudflare Zero Trust (optionnel)."
+      "consent.discount": "Oui, je souhaite bénéficier de la réduction de 500 € sur une implémentation Cloudflare Zero Trust (optionnel).",
+      // Result Page
+      "result.title": "Votre Évaluation de Sécurité",
+      "result.pdf_btn": "Générer & Télécharger le PDF",
+      "result.book_btn": "Prendre rendez-vous directement",
+      "result.discount_msg": "Une réduction de 500 € sur votre première implémentation Cloudflare Zero Trust vous a été réservée.",
+      "result.risk.low": "Risque Faible",
+      "result.risk.medium": "Risque Moyen",
+      "result.risk.high": "Risque Élevé"
     }
   }
 };

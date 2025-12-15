@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useFunnelStore } from '@/store/funnel-store';
 import { Header } from '@/components/layout/Header';
 import { FunnelStep } from '@/components/funnel/FunnelStep';
@@ -12,8 +13,12 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { funnelQuestions, techStackQuestions, contactQuestions, TOTAL_STEPS } from '@/lib/questions';
 import { ExternalLink } from 'lucide-react';
+import { api } from '@/lib/api-client';
+import type { Lead } from '@shared/types';
+import { Toaster, toast } from 'sonner';
 export function HomePage() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const currentStep = useFunnelStore((s) => s.currentStep);
   const answers = useFunnelStore((s) => s.answers);
   const setAnswer = useFunnelStore((s) => s.setAnswer);
@@ -46,12 +51,44 @@ export function HomePage() {
             ? q.dependsOn.value.includes(dependencyAnswer as string)
             : dependencyAnswer === q.dependsOn.value;
     });
+    if (currentStep === 5) { // Also check consents for the last step
+        const contactComplete = visibleQuestions.every(q => {
+            if (!q.required) return true;
+            const answer = answers[q.id];
+            return answer !== undefined && answer !== null && (Array.isArray(answer) ? answer.length > 0 : answer !== '');
+        });
+        const consentContact = answers.consent_contact === '1';
+        return contactComplete && consentContact;
+    }
     return visibleQuestions.every(q => {
         if (!q.required) return true;
         const answer = answers[q.id];
         return answer !== undefined && answer !== null && (Array.isArray(answer) ? answer.length > 0 : answer !== '');
     });
   }, [currentStep, answers]);
+  const handleSubmit = async () => {
+    try {
+      const data = { 
+        language: useFunnelStore.getState().language, 
+        formData: {
+          ...answers,
+          consent_contact: answers.consent_contact === '1' ? '1' : '0',
+          consent_tracking: answers.consent_tracking === '1' ? '1' : '0',
+          discount_opt_in: answers.discount_opt_in === '1' ? '1' : '0',
+        }
+      };
+      const lead = await api<Lead>('/api/leads', {
+        method:'POST', 
+        body:JSON.stringify(data)
+      });
+      navigate(`/result/${lead.id}`);
+      reset();
+    } catch(e) {
+      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
+      toast.error(errorMessage);
+      console.error(e);
+    }
+  };
   const renderStepContent = () => {
     const getVisibleQuestions = (level: number) =>
       funnelQuestions
@@ -89,7 +126,7 @@ export function HomePage() {
         );
       case 5:
         return (
-          <FunnelStep title={t('step.contact.title')} onNext={() => alert('Submit!')} onBack={prevStep} isLastStep isNextDisabled={!isStepComplete}>
+          <FunnelStep title={t('step.contact.title')} onNext={handleSubmit} onBack={prevStep} isLastStep isNextDisabled={!isStepComplete}>
             <Card>
                 <CardHeader><CardTitle>{t('step.contact.title')}</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
@@ -105,15 +142,15 @@ export function HomePage() {
                 <CardHeader><CardTitle>Einwilligungen</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-start space-x-2">
-                        <Checkbox id="consent_contact" checked={!!answers.consent_contact} onCheckedChange={(val) => setAnswer('consent_contact', val ? '1' : '0')} />
-                        <Label htmlFor="consent_contact" className="text-sm font-normal">{t('consent.contact')}</Label>
+                        <Checkbox id="consent_contact" checked={answers.consent_contact === '1'} onCheckedChange={(val) => setAnswer('consent_contact', val ? '1' : '0')} />
+                        <Label htmlFor="consent_contact" className="text-sm font-normal">{t('consent.contact')} <span className="text-destructive">*</span></Label>
                     </div>
                     <div className="flex items-start space-x-2">
-                        <Checkbox id="consent_tracking" checked={!!answers.consent_tracking} onCheckedChange={(val) => setAnswer('consent_tracking', val ? '1' : '0')} />
+                        <Checkbox id="consent_tracking" checked={answers.consent_tracking === '1'} onCheckedChange={(val) => setAnswer('consent_tracking', val ? '1' : '0')} />
                         <Label htmlFor="consent_tracking" className="text-sm font-normal">{t('consent.tracking')}</Label>
                     </div>
                     <div className="flex items-start space-x-2">
-                        <Checkbox id="discount_opt_in" checked={!!answers.discount_opt_in} onCheckedChange={(val) => setAnswer('discount_opt_in', val ? '1' : '0')} />
+                        <Checkbox id="discount_opt_in" checked={answers.discount_opt_in === '1'} onCheckedChange={(val) => setAnswer('discount_opt_in', val ? '1' : '0')} />
                         <Label htmlFor="discount_opt_in" className="text-sm font-normal">{t('consent.discount')}</Label>
                     </div>
                 </CardContent>
@@ -146,20 +183,25 @@ export function HomePage() {
   };
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <Toaster richColors />
       <Header />
       <main className="flex-grow flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-4xl mx-auto">
-          {currentStep > 0 && (
-            <div className="mb-8">
-              <Progress value={progressValue} className="w-full [&>div]:bg-orange-500" />
-              <p className="text-center text-sm text-muted-foreground mt-2">Schritt {currentStep} von {TOTAL_STEPS}</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="py-8 md:py-10 lg:py-12">
+            <div className="w-full max-w-4xl mx-auto">
+              {currentStep > 0 && (
+                <div className="mb-8">
+                  <Progress value={progressValue} className="w-full [&>div]:bg-orange-500" />
+                  <p className="text-center text-sm text-muted-foreground mt-2">Schritt {currentStep} von {TOTAL_STEPS}</p>
+                </div>
+              )}
+              <AnimatePresence mode="wait">
+                <div key={currentStep} className="flex justify-center">
+                  {renderStepContent()}
+                </div>
+              </AnimatePresence>
             </div>
-          )}
-          <AnimatePresence mode="wait">
-            <div key={currentStep} className="flex justify-center">
-              {renderStepContent()}
-            </div>
-          </AnimatePresence>
+          </div>
         </div>
       </main>
       <footer className="text-center py-4 text-sm text-muted-foreground">

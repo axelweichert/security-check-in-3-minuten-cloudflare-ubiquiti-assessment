@@ -43,7 +43,7 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
             </SelectContent>
           </Select>
         );
-      case 'checkbox':
+      case 'checkbox': {
         const handleCheckboxChange = (checked: boolean, optionValue: string) => {
           const currentValues = Array.isArray(value) ? value : [];
           if (checked) {
@@ -66,11 +66,12 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
             ))}
           </div>
         );
+      }
       case 'text':
       case 'email':
       case 'tel':
         return (
-            <Input 
+            <Input
                 type={question.type}
                 value={value as string || ''}
                 onChange={(e) => onChange(e.target.value)}
@@ -81,6 +82,10 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
         return null;
     }
   };
+  // For contact fields, don't wrap in a card, just render the input.
+  if (question.level === 5 && (question.type === 'text' || question.type === 'email' || question.type === 'tel' || question.type === 'select')) {
+    return renderInput();
+  }
   return (
     <Card>
       <CardHeader>
