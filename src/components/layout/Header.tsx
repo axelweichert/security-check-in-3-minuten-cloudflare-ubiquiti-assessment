@@ -24,25 +24,25 @@ export function Header() {
     <header className="py-4 sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
         <div className="flex items-center space-x-2 md:space-x-4 text-sm md:text-base">
-          <div className="flex items-center gap-1.5 group transition-colors duration-200 hover:text-primary/90">
-            <Layers className="h-5 w-5 flex-shrink-0 opacity-80" />
+          <a href="https://www.vonbusch.digital" target="_blank" rel="noopener noreferrer" className="group transition-colors duration-200 hover:text-primary/90 flex items-center gap-1.5">
+            <Layers className="h-5 w-5 flex-shrink-0 opacity-80 text-black dark:text-white" />
             <span className="font-semibold">von Busch GmbH</span>
-          </div>
-          <span className="text-primary/30 text-xl font-light hidden sm:inline-block">|</span>
-          <div className="hidden sm:flex items-center gap-1.5 group transition-colors duration-200 hover:text-primary/90">
-            <Crosshair className="h-4 w-4 opacity-80" />
+          </a>
+          <span className="text-muted-foreground/50 text-xl font-light hidden sm:inline-block">|</span>
+          <a href="https://www.hxnwrk.de" target="_blank" rel="noopener noreferrer" className="hidden sm:flex items-center gap-1.5 group transition-colors duration-200 hover:text-primary/90">
+            <Crosshair className="h-4 w-4 opacity-80 text-[#3772EB]" />
             <span className="font-semibold text-xs md:text-sm">HXNWRK</span>
-          </div>
-          <span className="text-primary/30 text-xl font-light">|</span>
-          <div className="flex items-center gap-1.5 transition-colors hover:text-foreground">
-            <Shield className="h-5 w-5 text-blue-500 mr-1" />
+          </a>
+          <span className="text-muted-foreground/50 text-xl font-light">|</span>
+          <a href="https://www.cloudflare.com" target="_blank" rel="noopener noreferrer" className="group transition-colors duration-200 hover:text-foreground flex items-center gap-1.5">
+            <Shield className="h-5 w-5 mr-1 text-[#F38020]" />
             <span className="font-medium">Cloudflare</span>
-          </div>
-          <span className="text-primary/30 text-xl font-light hidden sm:inline-block">|</span>
-          <div className="hidden sm:flex items-center gap-1.5 transition-colors hover:text-foreground">
+          </a>
+          <span className="text-muted-foreground/50 text-xl font-light hidden sm:inline-block">|</span>
+          <a href="https://www.ui.com" target="_blank" rel="noopener noreferrer" className="hidden sm:flex items-center gap-1.5 group transition-colors duration-200 hover:text-foreground">
             <Wifi className="h-4 w-4 text-green-500 mr-1" />
             <span className="font-medium">Ubiquiti</span>
-          </div>
+          </a>
         </div>
         <div className="flex items-center space-x-1">
           <DropdownMenu>
