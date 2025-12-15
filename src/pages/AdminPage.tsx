@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, Eye, Calendar, Filter as FilterIcon } from 'lucide-react';
+import { Download, Eye, Filter as FilterIcon } from 'lucide-react';
 const riskLevelColors: Record<string, string> = {
   low: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-300/50',
   medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-300/50',
@@ -50,8 +51,8 @@ export default function AdminPage() {
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><FilterIcon className="h-5 w-5" /> {t('admin.filters.title')}</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-end">
-          <div className="space-y-2"><Label>{t('admin.filters.date_from')}</Label><Input type="date" value={searchParams.get('from') || ''} onChange={e => handleFilterChange('from', e.target.value)} /></div>
-          <div className="space-y-2"><Label>{t('admin.filters.date_to')}</Label><Input type="date" value={searchParams.get('to') || ''} onChange={e => handleFilterChange('to', e.target.value)} /></div>
+          <div className="space-y-2"><Label htmlFor="from">{t('admin.filters.date_from')}</Label><Input id="from" type="date" value={searchParams.get('from') || ''} onChange={e => handleFilterChange('from', e.target.value)} /></div>
+          <div className="space-y-2"><Label htmlFor="to">{t('admin.filters.date_to')}</Label><Input id="to" type="date" value={searchParams.get('to') || ''} onChange={e => handleFilterChange('to', e.target.value)} /></div>
           <div className="space-y-2"><Label>{t('admin.filters.status')}</Label><Select value={searchParams.get('status') || 'all'} onValueChange={v => handleFilterChange('status', v)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent><SelectItem value="all">{t('admin.filters.status.all')}</SelectItem><SelectItem value="new">{t('admin.filters.status.new')}</SelectItem><SelectItem value="done">{t('admin.filters.status.done')}</SelectItem></SelectContent>

@@ -18,11 +18,11 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
       case 'radio':
         return (
           <RadioGroup onValueChange={onChange} value={value as string}>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {question.options?.map((option) => (
-                <div key={option.value} className="flex items-center space-x-2">
+                <div key={option.value} className="flex items-center space-x-3">
                   <RadioGroupItem value={option.value} id={`${question.id}-${option.value}`} />
-                  <Label htmlFor={`${question.id}-${option.value}`}>{t(option.labelKey)}</Label>
+                  <Label htmlFor={`${question.id}-${option.value}`} className="font-normal">{t(option.labelKey)}</Label>
                 </div>
               ))}
             </div>
@@ -53,15 +53,15 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
           }
         };
         return (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {question.options?.map((option) => (
-              <div key={option.value} className="flex items-center space-x-2">
+              <div key={option.value} className="flex items-center space-x-3">
                 <Checkbox
                   id={`${question.id}-${option.value}`}
                   checked={Array.isArray(value) && value.includes(option.value)}
                   onCheckedChange={(checked) => handleCheckboxChange(!!checked, option.value)}
                 />
-                <Label htmlFor={`${question.id}-${option.value}`}>{t(option.labelKey)}</Label>
+                <Label htmlFor={`${question.id}-${option.value}`} className="font-normal">{t(option.labelKey)}</Label>
               </div>
             ))}
           </div>
@@ -87,7 +87,7 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
     return renderInput();
   }
   return (
-    <Card>
+    <Card className="shadow-sm hover:shadow-md transition-shadow">
       <CardHeader>
         <CardTitle className="text-lg font-medium">{t(question.labelKey)}</CardTitle>
       </CardHeader>

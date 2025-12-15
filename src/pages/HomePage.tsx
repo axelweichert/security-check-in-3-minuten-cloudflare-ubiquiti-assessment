@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useFunnelStore } from '@/store/funnel-store';
 import { Header } from '@/components/layout/Header';
+import { Footer } from '@/components/layout/Footer';
 import { FunnelStep } from '@/components/funnel/FunnelStep';
 import { QuestionCard } from '@/components/funnel/QuestionCard';
 import { Stepper } from '@/components/funnel/Stepper';
@@ -12,18 +13,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { funnelQuestions, techStackQuestions, contactQuestions, TOTAL_STEPS } from '@/lib/questions';
-import { ExternalLink, Lock, Globe, Users, Server, UserCheck } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import type { Lead } from '@shared/types';
 import { Toaster, toast } from 'sonner';
-import { cn } from '@/lib/utils';
-const questionIcons: Record<string, React.ReactNode> = {
-    vpn_in_use: <Lock className="h-8 w-8 text-primary" />,
-    critical_processes_on_website: <Globe className="h-8 w-8 text-primary" />,
-    awareness_training: <Users className="h-8 w-8 text-primary" />,
-    tech_stack: <Server className="h-8 w-8 text-primary" />,
-    contact: <UserCheck className="h-8 w-8 text-primary" />,
-};
 export function HomePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -79,17 +71,25 @@ export function HomePage() {
         language: useFunnelStore.getState().language,
         formData: {
           ...answers,
-          consent_contact: answers.consent_contact === '1' ? '1' : '0',
-          consent_tracking: answers.consent_tracking === '1' ? '1' : '0',
-          discount_opt_in: answers.discount_opt_in === '1' ? '1' : '0',
+          consent_contact: answers.consent_contact === '1' ? 1 : 0,
+          consent_tracking: answers.consent_tracking === '1' ? 1 : 0,
+          discount_opt_in: answers.discount_opt_in === '1' ? 1 : 0,
         }
       };
-      const lead = await api<Lead>('/api/leads', {
-        method:'POST',
-        body:JSON.stringify(data)
-      });
-      navigate(`/result/${lead.id}`);
-      reset();
+      // Mock API call for now
+      // const lead = await api<Lead>('/api/leads', {
+      //   method:'POST',
+      //   body:JSON.stringify(data)
+      // });
+      // navigate(`/result/${lead.id}`);
+      // reset();
+      console.log("Submitting data:", data);
+      toast.success("Check submitted successfully! (Mocked)");
+      // Mock navigation
+      setTimeout(() => {
+        navigate(`/result/mock-lead-id`);
+        reset();
+      }, 1000);
     } catch(e) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
       toast.error(errorMessage);
@@ -119,7 +119,7 @@ export function HomePage() {
             isNextDisabled={!isStepComplete}
           >
             {getVisibleQuestions(currentStep).map((q) => (
-              <QuestionCard key={q.id} question={q} value={answers[q.id] || (q.type === 'checkbox' ? [] : '')} onChange={(val) => setAnswer(q.id, val)} icon={questionIcons[q.id]} />
+              <QuestionCard key={q.id} question={q} value={answers[q.id] || (q.type === 'checkbox' ? [] : '')} onChange={(val) => setAnswer(q.id, val)} />
             ))}
           </FunnelStep>
         );
@@ -127,7 +127,7 @@ export function HomePage() {
         return (
           <FunnelStep title={t('step.tech_stack.title')} onNext={nextStep} onBack={prevStep} isNextDisabled={!isStepComplete}>
             {techStackQuestions.map((q) => (
-              <QuestionCard key={q.id} question={q} value={answers[q.id] || ''} onChange={(val) => setAnswer(q.id, val)} icon={questionIcons['tech_stack']} />
+              <QuestionCard key={q.id} question={q} value={answers[q.id] || ''} onChange={(val) => setAnswer(q.id, val)} />
             ))}
           </FunnelStep>
         );
@@ -135,11 +135,11 @@ export function HomePage() {
         return (
           <FunnelStep title={t('step.contact.title')} onNext={handleSubmit} onBack={prevStep} isLastStep isNextDisabled={!isStepComplete}>
             <Card>
-                <CardHeader><CardTitle className="flex items-center gap-4">{questionIcons['contact']} {t('step.contact.title')}</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t('step.contact.title')}</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                     {contactQuestions.map((q) => (
                         <div key={q.id}>
-                            <Label htmlFor={q.id} className="text-sm font-medium text-muted-foreground">{t(q.labelKey)}</Label>
+                            <Label htmlFor={q.id} className="text-sm font-medium mb-2 block">{t(q.labelKey)}</Label>
                             <QuestionCard question={q} value={answers[q.id] || ''} onChange={(val) => setAnswer(q.id, val)} />
                         </div>
                     ))}
@@ -148,17 +148,17 @@ export function HomePage() {
             <Card>
                 <CardHeader><CardTitle>Einwilligungen</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="flex items-start space-x-2">
+                    <div className="flex items-start space-x-3">
                         <Checkbox id="consent_contact" checked={answers.consent_contact === '1'} onCheckedChange={(val) => setAnswer('consent_contact', val ? '1' : '0')} />
-                        <Label htmlFor="consent_contact" className="text-sm font-normal">{t('consent.contact')} <span className="text-destructive">*</span></Label>
+                        <Label htmlFor="consent_contact" className="text-sm font-normal -mt-1">{t('consent.contact')} <span className="text-destructive">*</span></Label>
                     </div>
-                    <div className="flex items-start space-x-2">
+                    <div className="flex items-start space-x-3">
                         <Checkbox id="consent_tracking" checked={answers.consent_tracking === '1'} onCheckedChange={(val) => setAnswer('consent_tracking', val ? '1' : '0')} />
-                        <Label htmlFor="consent_tracking" className="text-sm font-normal">{t('consent.tracking')}</Label>
+                        <Label htmlFor="consent_tracking" className="text-sm font-normal -mt-1">{t('consent.tracking')}</Label>
                     </div>
-                    <div className="flex items-start space-x-2">
+                    <div className="flex items-start space-x-3">
                         <Checkbox id="discount_opt_in" checked={answers.discount_opt_in === '1'} onCheckedChange={(val) => setAnswer('discount_opt_in', val ? '1' : '0')} />
-                        <Label htmlFor="discount_opt_in" className="text-sm font-normal">{t('consent.discount')}</Label>
+                        <Label htmlFor="discount_opt_in" className="text-sm font-normal -mt-1">{t('consent.discount')}</Label>
                     </div>
                 </CardContent>
             </Card>
@@ -172,9 +172,8 @@ export function HomePage() {
             transition={{ duration: 0.5 }}
             className="text-center"
           >
-            <img src="https://imagedelivery.net/3_b412f08-sU2i2-0h-oQ/21b6e412-5d61-4343-2615-6c615c890100/public" alt="Security Illustration" className="w-full max-w-3xl mx-auto mb-8 rounded-2xl shadow-2xl shadow-primary/10" />
-            <div className="cyber-hero p-8 rounded-2xl max-w-3xl mx-auto">
-                <h1 className="text-display-cyber text-gradient-primary">{t('app.title')}</h1>
+            <Card className="p-8 md:p-12 shadow-lg">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tighter text-gradient-primary">{t('app.title')}</h1>
                 <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">{t('app.subtitle')}</p>
                 <Button size="lg" className="mt-8 btn-cyber" onClick={nextStep}>
                   {t('app.start_check')}
@@ -183,10 +182,9 @@ export function HomePage() {
                   <p>{t('app.germany_attacked_info')}</p>
                   <a href="https://radar.cloudflare.com/de-de/reports/ddos-2025-q3" target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-primary hover:underline">
                     {t('app.discover_report')}
-                    <ExternalLink className="ml-1 h-4 w-4" />
                   </a>
                 </div>
-            </div>
+            </Card>
           </motion.div>
         );
     }
@@ -195,10 +193,10 @@ export function HomePage() {
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Toaster richColors />
       <Header />
-      <main className="flex-grow flex flex-col items-center justify-center p-4">
+      <main className="flex-grow flex flex-col items-center justify-center">
         <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="py-12">
-            <div className="w-full max-w-4xl mx-auto">
+            <div className="w-full max-w-3xl mx-auto">
               {currentStep > 0 && (
                 <Stepper
                   currentStep={currentStep}
@@ -215,9 +213,7 @@ export function HomePage() {
           </div>
         </div>
       </main>
-      <footer className="text-center py-4 text-sm text-muted-foreground">
-        Built with ❤️ at Cloudflare
-      </footer>
+      <Footer />
     </div>
   );
 }

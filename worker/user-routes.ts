@@ -57,13 +57,13 @@ const submitSchema = z.object({
     employee_range: z.string().min(1),
     email: z.string().email(),
     phone: z.string().min(1),
-    consent_contact: z.enum(['0', '1']),
+    consent_contact: z.number().min(0).max(1),
   }).catchall(z.any())
 });
 const pdfTexts = {
   de: { header: 'Ihre Security-Auswertung', title: 'Auswertung für', risk: 'Risikolevel', risk_low: 'Niedriges Risiko', risk_medium: 'Mittleres Risiko', risk_high: 'Hohes Risiko', scores_title: 'Score-Übersicht', answers_title: 'Ihre Antworten', vpn: 'VPN', web: 'Web-Schutz', awareness: 'Awareness', stack: 'Tech Stack', zero_trust: 'Zero Trust', total: 'Gesamt', discount: '500€ Rabatt für Cloudflare Zero Trust Implementierung reserviert.', booking: 'Buchen Sie Ihren Beratungstermin:' },
   en: { header: 'Your Security Evaluation', title: 'Evaluation for', risk: 'Risk Level', risk_low: 'Low Risk', risk_medium: 'Medium Risk', risk_high: 'High Risk', scores_title: 'Score Overview', answers_title: 'Your Answers', vpn: 'VPN', web: 'Web Protection', awareness: 'Awareness', stack: 'Tech Stack', zero_trust: 'Zero Trust', total: 'Total', discount: '€500 discount for Cloudflare Zero Trust implementation reserved.', booking: 'Book your consultation:' },
-  fr: { header: 'Votre Évaluation de Sécurit��', title: 'Évaluation pour', risk: 'Niveau de Risque', risk_low: 'Risque Faible', risk_medium: 'Risque Moyen', risk_high: 'Risque Élevé', scores_title: 'Aperçu du Score', answers_title: 'Vos Réponses', vpn: 'VPN', web: 'Protection Web', awareness: 'Sensibilisation', stack: 'Stack Tech', zero_trust: 'Zero Trust', total: 'Total', discount: '500€ de réduction réservés pour l\'implémentation de Cloudflare Zero Trust.', booking: 'Réservez votre consultation:' },
+  fr: { header: 'Votre Évaluation de Sécurité', title: 'Évaluation pour', risk: 'Niveau de Risque', risk_low: 'Risque Faible', risk_medium: 'Risque Moyen', risk_high: 'Risque Élevé', scores_title: 'Aperçu du Score', answers_title: 'Vos Réponses', vpn: 'VPN', web: 'Protection Web', awareness: 'Sensibilisation', stack: 'Stack Tech', zero_trust: 'Zero Trust', total: 'Total', discount: '500€ de réduction réservés pour l\'implémentation de Cloudflare Zero Trust.', booking: 'Réservez votre consultation:' },
 };
 async function getFilteredLeads(c: any): Promise<LeadListItem[]> {
     const { items: rawLeads } = await LeadEntity.list(c.env, null, 1000);
@@ -98,9 +98,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       employee_range: formData.employee_range, email: formData.email, phone: formData.phone,
       firewall_vendor: formData.firewall_vendor || null, vpn_technology: formData.vpn_technology || null,
       zero_trust_vendor: formData.zero_trust_vendor || null,
-      consent_contact: parseInt(formData.consent_contact),
-      consent_tracking: parseInt(formData.consent_tracking || '0'),
-      discount_opt_in: parseInt(formData.discount_opt_in || '0'),
+      consent_contact: formData.consent_contact,
+      consent_tracking: formData.consent_tracking || 0,
+      discount_opt_in: formData.discount_opt_in || 0,
       status: 'new'
     };
     const lead = await LeadEntity.create(c.env, { ...leadData, id: leadId });
@@ -205,18 +205,18 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     page.drawText(texts.answers_title, { x: 50, y: currentY, font: boldFont, size: 16 });
     currentY -= 25;
     for (const answer of answers) {
-        if (currentY < 100) { 
-            page = doc.addPage(); 
-            currentY = height - 50; 
+        if (currentY < 100) {
+            page = doc.addPage();
+            currentY = height - 50;
         }
         page.drawText(`${answer.question_key}:`, { x: 60, y: currentY, font: boldFont, size: 10 });
         page.drawText(answer.answer_value, { x: 200, y: currentY, font, size: 10, maxWidth: 350 });
         currentY -= 20;
     }
     if (leadData.discount_opt_in) {
-        if (currentY < 100) { 
-            page = doc.addPage(); 
-            currentY = height - 50; 
+        if (currentY < 100) {
+            page = doc.addPage();
+            currentY = height - 50;
         }
         page.drawText(texts.discount, { x: 50, y: currentY, font: boldFont, size: 11, color: rgb(0.1, 0.5, 0.1) });
         currentY -= 20;
