@@ -80,7 +80,8 @@ function runSetupCommands() {
     const commands = [
     "bun add i18next@^23.15.2",
     "bun add react-i18next@^15.0.3",
-    "bun add pdf-lib@^1.17.1"
+    "bun add pdf-lib@^1.17.1",
+    "bun install i18next react-i18next i18next-browser-languagedetector"
 ];
     
     if (commands.length === 0) {
