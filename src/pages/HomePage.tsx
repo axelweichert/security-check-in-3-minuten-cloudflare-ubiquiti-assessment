@@ -140,7 +140,7 @@ export function HomePage() {
                 </CardContent>
             </Card>
             <Card>
-                <CardHeader><CardTitle>Einwilligungen</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t('consents.title')}</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-start space-x-3">
                         <Checkbox id="consent_contact" checked={answers.consent_contact === '1'} onCheckedChange={(val) => setAnswer('consent_contact', val ? '1' : '0')} />

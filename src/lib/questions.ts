@@ -206,9 +206,9 @@ export const techStackQuestions: Question[] = [
     type: 'select',
     labelKey: 'q.zero_trust_vendor',
     options: [
-      { value: 'cloudflare', labelKey: 'Cloudflare Zero Trust' },
-      { value: 'other', labelKey: 'Andere Zero-Trust-Lösung' },
-      { value: 'no', labelKey: 'Nein' },
+      { value: 'cloudflare', labelKey: 'o.zero_cloudflare' },
+      { value: 'other', labelKey: 'o.zero_other' },
+      { value: 'no', labelKey: 'o.zero_no' },
       { value: 'dont_know', labelKey: 'o.dont_know' },
     ],
     required: true,

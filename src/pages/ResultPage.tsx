@@ -110,8 +110,8 @@ export default function ResultPage() {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col">
         <Header />
-        <main className="flex-grow max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="py-12 space-y-8">
+        <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="py-8 md:py-10 lg:py-12 space-y-8">
             <Skeleton className="h-48 w-full rounded-xl" />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Skeleton className="h-32 w-full rounded-xl" />

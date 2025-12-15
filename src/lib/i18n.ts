@@ -93,6 +93,9 @@ const resources = {
       "o.employee_10_49": "10-49",
       "o.employee_50_249": "50-249",
       "o.employee_250_plus": "250+",
+      "o.zero_cloudflare": "Cloudflare Zero Trust",
+      "o.zero_other": "Andere Zero-Trust-Lösung",
+      "o.zero_no": "Nein",
       // Contact Form
       "contact.company_name": "Firmenname",
       "contact.contact_person": "Ansprechpartner",
@@ -100,6 +103,7 @@ const resources = {
       "contact.email": "E-Mail",
       "contact.phone": "Telefonnummer",
       // Consents
+      "consents.title": "Einwilligungen",
       "consent.contact": "Ich stimme zu, dass die von Busch GmbH mich bezüglich meiner Anfrage kontaktieren darf. Diese Einwilligung kann jederzeit widerrufen werden.",
       "consent.tracking": "Ich stimme dem anonymen, DSGVO-konformen Tracking zu, um die Servicequalität zu verbessern (optional).",
       "consent.discount": "Ja, ich möchte mir den 500€ Rabatt auf eine Cloudflare Zero Trust Implementierung sichern (optional).",
@@ -176,7 +180,7 @@ const resources = {
       "admin.detail.answers": "Antworten",
       "admin.detail.status_card": "Status",
       "admin.detail.mark_done": "Als erledigt markieren",
-      "utf8_test": "Alfred-Bozi-Straße 12 – 33602 Bielefeld | Sichere dir 500€ Preisnachlass | Contrôle de Sécurité en 3 Minutes | Sécurité, confidentialité, accès € é ç ß ä ö ü"
+      "utf8_test": "Alfred-Bozi-Straße 12 – 33602 Bielefeld | Sichere dir 500€ Preisnachlass | Contrôle de S��curité en 3 Minutes | Sécurité, confidentialité, accès € é ç ß ä ö ü"
     }
   },
   en: {
@@ -270,6 +274,9 @@ const resources = {
       "o.employee_10_49": "10-49",
       "o.employee_50_249": "50-249",
       "o.employee_250_plus": "250+",
+      "o.zero_cloudflare": "Cloudflare Zero Trust",
+      "o.zero_other": "Other Zero-Trust Solution",
+      "o.zero_no": "No",
       // Contact Form
       "contact.company_name": "Company Name",
       "contact.contact_person": "Contact Person",
@@ -277,6 +284,7 @@ const resources = {
       "contact.email": "Email",
       "contact.phone": "Phone Number",
       // Consents
+      "consents.title": "Consents",
       "consent.contact": "I agree that von Busch GmbH may contact me regarding my inquiry. This consent can be revoked at any time.",
       "consent.tracking": "I agree to anonymous, GDPR-compliant tracking to improve service quality (optional).",
       "consent.discount": "Yes, I want to secure the €500 discount on a Cloudflare Zero Trust implementation (optional).",
@@ -353,7 +361,7 @@ const resources = {
       "admin.detail.answers": "Answers",
       "admin.detail.status_card": "Status",
       "admin.detail.mark_done": "Mark as Done",
-      "utf8_test": "Alfred-Bozi-Straße 12 – 33602 Bielefeld | Secure your €500 discount | Security Check in 3 Minutes | Security, privacy, access € é ç ß ä ö ü"
+      "utf8_test": "Alfred-Bozi-Straße 12 – 33602 Bielefeld | Secure your €500 discount | Security Check in 3 Minutes | Security, privacy, access € é ç �� ä ö ü"
     }
   },
   fr: {
@@ -447,6 +455,9 @@ const resources = {
       "o.employee_10_49": "10-49",
       "o.employee_50_249": "50-249",
       "o.employee_250_plus": "250+",
+      "o.zero_cloudflare": "Cloudflare Zero Trust",
+      "o.zero_other": "Autre solution Zero Trust",
+      "o.zero_no": "Non",
       // Contact Form
       "contact.company_name": "Nom de l'entreprise",
       "contact.contact_person": "Personne de contact",
@@ -454,9 +465,10 @@ const resources = {
       "contact.email": "E-mail",
       "contact.phone": "Numéro de téléphone",
       // Consents
+      "consents.title": "Consentements",
       "consent.contact": "J'accepte que von Busch GmbH me contacte concernant ma demande. Ce consentement peut être révoqué à tout moment.",
       "consent.tracking": "J'accepte le suivi anonyme et conforme au RGPD pour améliorer la qualité du service (optionnel).",
-      "consent.discount": "Oui, je souhaite bénéficier de la réduction de 500 € sur une implémentation Cloudflare Zero Trust (optionnel).",
+      "consent.discount": "Oui, je souhaite bén��ficier de la réduction de 500 € sur une implémentation Cloudflare Zero Trust (optionnel).",
       "pdf.loading": "PDF en cours de création...",
       "pdf.error": "Erreur de téléchargement PDF",
       // Result Page
@@ -471,7 +483,7 @@ const resources = {
       "result.best_practice": "Pare-feu Ubiquiti + Cloudflare Zero Trust",
       "result.answers_title": "Réponses Détaillées",
       "result.score_overview": "Aperçu du Score",
-      "result.next_steps": "Prochaines ��tapes",
+      "result.next_steps": "Prochaines Étapes",
       "score.vpn": "VPN",
       "score.web": "Protection Web",
       "score.awareness": "Sensibilisation",
