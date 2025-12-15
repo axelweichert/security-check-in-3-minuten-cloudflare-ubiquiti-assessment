@@ -1,6 +1,6 @@
 # Security Check in 3 Minuten - Cloudflare & Ubiquiti Assessment
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/axelweichert/security-check-in-3-minuten-cloudflare-ubiquiti-assessment)
 
 A professional, multilingual (DE/EN/FR) multi-step security assessment application designed to evaluate corporate resilience against cyber threats. Features a sophisticated funnel (Levels 1-3, Tech Stack, Consents), deterministic risk scoring, Cloudflare D1-like persistence via Durable Objects, PDF report generation, Microsoft Bookings integration, and a protected admin dashboard for lead management.
 
@@ -105,7 +105,7 @@ This:
 1. `bun build`
 2. `wrangler deploy`
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/axelweichert/security-check-in-3-minuten-cloudflare-ubiquiti-assessment)
 
 **Post-Deploy**:
 - Protect `/admin` with [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/)
