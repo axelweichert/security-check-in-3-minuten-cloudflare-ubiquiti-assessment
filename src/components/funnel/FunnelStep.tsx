@@ -40,7 +40,7 @@ export function FunnelStep({
         ) : (
           <div />
         )}
-        <Button size="lg" onClick={onNext} disabled={isNextDisabled} className="bg-[#F48120] hover:bg-[#F48120]/90 text-white">
+        <Button size="lg" onClick={onNext} disabled={isNextDisabled} className="bg-primary hover:bg-primary/90 text-primary-foreground">
           {isLastStep ? t('app.submit') : t('app.next')}
         </Button>
       </div>

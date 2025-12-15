@@ -12,57 +12,67 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { api } from '@/lib/api-client';
 import type { GetLeadResponse } from '@shared/types';
-import { funnelQuestions, techStackQuestions } from '@/lib/questions';
-const allQuestions = [...funnelQuestions, ...techStackQuestions];
+import { funnelQuestions, techStackQuestions, contactQuestions } from '@/lib/questions';
+const allQuestions = [...funnelQuestions, ...techStackQuestions, ...contactQuestions];
 const riskLevelClasses = {
   low: 'border-green-500/50 bg-green-500/10 text-green-400',
   medium: 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400',
   high: 'border-red-500/50 bg-red-500/10 text-red-400',
 };
-const ScoreCard = ({ title, score, maxScore }: { title: string, score: number, maxScore: number }) => {
-    const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
-    let statusText = 'Poor';
-    let statusColor = 'text-red-500';
-    if (percentage >= 75) {
-        statusText = 'Good';
-        statusColor = 'text-green-500';
-    } else if (percentage >= 40) {
-        statusText = 'Medium';
-        statusColor = 'text-yellow-500';
-    }
-    return (
-        <Card className="shadow-sm">
-            <CardHeader className="pb-2">
-                <CardTitle className="text-base font-medium">{title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="text-3xl font-bold">{score}<span className="text-lg text-muted-foreground">/{maxScore}</span></div>
-                <p className={`text-sm font-semibold ${statusColor}`}>{statusText}</p>
-            </CardContent>
-        </Card>
-    );
+type ScoreStatus = 'poor' | 'medium' | 'good';
+const getScoreStatus = (score: number, maxScore: number): ScoreStatus => {
+  const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
+  if (percentage >= 75) return 'good';
+  if (percentage >= 40) return 'medium';
+  return 'poor';
+};
+const ScoreBreakdownCard = ({ title, status, explanation }: { title: string, status: ScoreStatus, explanation: string }) => {
+  const { t } = useTranslation();
+  const statusColors: Record<ScoreStatus, string> = {
+    poor: 'bg-red-500/10 text-red-400 border-red-500/20',
+    medium: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+    good: 'bg-green-500/10 text-green-400 border-green-500/20',
+  };
+  return (
+    <Card className="shadow-sm">
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+          <Badge variant="outline" className={`font-bold ${statusColors[status]}`}>{t(`score.status.${status}`)}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <p className="text-muted-foreground text-sm">{explanation}</p>
+      </CardContent>
+    </Card>
+  );
 };
 export default function ResultPage() {
   const { leadId } = useParams<{ leadId: string }>();
   const { t, i18n } = useTranslation();
-  // MOCK DATA FOR DEMO since API is not fully implemented
-  const isMock = leadId === 'mock-lead-id';
-  const mockData: GetLeadResponse = {
-    lead: { id: 'mock-lead-id', created_at: new Date().toISOString(), language: 'de', company_name: 'Musterfirma GmbH', contact_name: 'Max Mustermann', employee_range: '10-49', email: 'test@test.com', phone: '12345', consent_contact: 1, consent_tracking: 0, discount_opt_in: 1, status: 'new' },
-    scores: { id: 'mock-lead-id', lead_id: 'mock-lead-id', score_vpn: 1, score_web: 2, score_awareness: 1, score_stack: 2, score_zero_trust: 0, score_total: 55, risk_level: 'medium', best_practice_architecture: 0 },
-    answers: [{ id: '1', lead_id: 'mock-lead-id', question_key: 'vpn_in_use', answer_value: 'yes', score_value: 0 }]
-  };
-  const { data: realData, isLoading, error } = useQuery<GetLeadResponse>({
+  const { data, isLoading, error } = useQuery<GetLeadResponse>({
     queryKey: ['lead', leadId],
     queryFn: () => api(`/api/leads/${leadId}`),
-    enabled: !!leadId && !isMock,
+    enabled: !!leadId,
   });
-  const data = isMock ? mockData : realData;
   useEffect(() => {
     if (data?.lead.language) {
       i18n.changeLanguage(data.lead.language);
     }
   }, [data, i18n]);
+  const getDisplayValue = (questionId: string, value: string): string => {
+    const question = allQuestions.find(q => q.id === questionId);
+    if (!question || value === null || value === undefined) return value || 'N/A';
+    if (question.type === 'checkbox') {
+      const values = value.split(', ');
+      return values.map(v => {
+        const option = question.options?.find(o => o.value === v);
+        return option ? t(option.labelKey) : v;
+      }).join(', ');
+    }
+    const option = question.options?.find(o => o.value === value);
+    return option ? t(option.labelKey) : value;
+  };
   const { riskClasses, answerMap } = useMemo(() => {
     if (!data) return { riskClasses: riskLevelClasses.high, answerMap: new Map() };
     const { scores, answers } = data;
@@ -70,14 +80,14 @@ export default function ResultPage() {
     const answerMap = new Map(answers.map(a => [a.question_key, a.answer_value]));
     return { riskClasses, answerMap };
   }, [data]);
-  if (isLoading && !isMock) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col">
         <Header />
         <main className="flex-grow max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="py-12 space-y-8">
             <Skeleton className="h-48 w-full rounded-xl" />
-            <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Skeleton className="h-32 w-full rounded-xl" />
               <Skeleton className="h-32 w-full rounded-xl" />
               <Skeleton className="h-32 w-full rounded-xl" />
@@ -103,12 +113,15 @@ export default function ResultPage() {
     );
   }
   const { lead, scores } = data;
+  const vpnStatus = getScoreStatus(scores.score_vpn, 2);
+  const webStatus = getScoreStatus(scores.score_web, 3);
+  const awarenessStatus = getScoreStatus(scores.score_awareness, 2);
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Header />
       <main className="flex-grow">
-        <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-12 space-y-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-8 md:py-10 lg:py-12 space-y-8">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
               <Card className="shadow-md border-border/60">
                 <CardContent className="text-center p-8 md:p-12">
@@ -124,9 +137,9 @@ export default function ResultPage() {
               </Card>
             </motion.div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <ScoreCard title={t('score.vpn')} score={scores.score_vpn} maxScore={2} />
-                <ScoreCard title={t('score.web')} score={scores.score_web} maxScore={3} />
-                <ScoreCard title={t('score.awareness')} score={scores.score_awareness} maxScore={2} />
+                <ScoreBreakdownCard title={t('score.vpn_title')} status={vpnStatus} explanation={t(`score.vpn.${vpnStatus}.explain`)} />
+                <ScoreBreakdownCard title={t('score.web_title')} status={webStatus} explanation={t(`score.web.${webStatus}.explain`)} />
+                <ScoreBreakdownCard title={t('score.awareness_title')} status={awarenessStatus} explanation={t(`score.awareness.${awarenessStatus}.explain`)} />
             </div>
             {lead.discount_opt_in === 1 && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
@@ -137,9 +150,9 @@ export default function ResultPage() {
             )}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <Card className="shadow-md">
-                    <CardHeader><CardTitle>{t('result.next_steps', 'Next Steps')}</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>{t('result.next_steps')}</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
-                        <Button asChild size="lg" className="w-full btn-cyber">
+                        <Button asChild size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
                             <a href={`/api/leads/${leadId}/pdf`} download={`Security-Check-in-3-Minuten_${leadId}.pdf`}>
                                 {t('result.pdf_btn')}
                             </a>
@@ -154,16 +167,16 @@ export default function ResultPage() {
                 <Card className="shadow-md">
                     <Accordion type="single" collapsible className="w-full">
                         <AccordionItem value="answers">
-                            <AccordionTrigger className="px-6 text-lg font-semibold">{t('result.answers_title', 'Detailed Answers')}</AccordionTrigger>
+                            <AccordionTrigger className="px-6 text-lg font-semibold">{t('result.answers_title')}</AccordionTrigger>
                             <AccordionContent className="px-6 pt-2">
                             <div className="space-y-2 text-sm">
                                 {allQuestions.map(q => {
                                 const answer = answerMap.get(q.id);
                                 if (!answer) return null;
                                 return (
-                                    <div key={q.id} className="flex justify-between items-start p-2 rounded-md">
+                                    <div key={q.id} className="flex justify-between items-start p-2 rounded-md hover:bg-accent">
                                     <span className="font-medium text-muted-foreground mr-4">{t(q.labelKey)}:</span>
-                                    <span className="text-right font-semibold">{answer}</span>
+                                    <span className="text-right font-semibold">{getDisplayValue(q.id, answer)}</span>
                                     </div>
                                 );
                                 })}

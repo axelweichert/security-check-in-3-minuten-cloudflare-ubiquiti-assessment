@@ -80,11 +80,11 @@ export function HomePage() {
         method: 'POST',
         body: JSON.stringify(data),
       });
-      toast.success(t('app.submit_success', 'Erfolgreich eingereicht!'));
+      toast.success(t('app.submit_success'));
       navigate(`/result/${lead.id}`);
       reset();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : t('app.submit_error', 'Fehler beim Absenden');
+      const msg = e instanceof Error ? e.message : t('app.submit_error');
       toast.error(msg);
       console.error('Submit error:', e);
     }
@@ -175,13 +175,13 @@ export function HomePage() {
                          <CardContent className="p-0 space-y-3">
                            <h3 className="text-2xl font-bold text-foreground">{t('app.germany_attacked_info')}</h3>
                            <p className="text-sm text-muted-foreground">{t('app.report_source')}</p>
-                           <Button asChild size="lg" className="w-full btn-cyber">
+                           <Button asChild size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
                              <a href="https://radar.cloudflare.com/de-de/reports/ddos-2025-q3" target="_blank" rel="noopener noreferrer">{t('app.discover_report')}</a>
                            </Button>
                          </CardContent>
                        </Card>
                     </motion.div>
-                    <Button size="lg" className="mt-6 btn-cyber" onClick={nextStep}>
+                    <Button size="lg" className="mt-6 bg-primary hover:bg-primary/90 text-primary-foreground" onClick={nextStep}>
                       {t('app.start_check')}
                     </Button>
                 </CardContent>
@@ -195,8 +195,8 @@ export function HomePage() {
       <Toaster richColors />
       <Header />
       <main className="flex-grow flex flex-col items-center justify-center">
-        <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="py-8 md:py-10 lg:py-12">
             <div className="w-full max-w-3xl mx-auto">
               {currentStep > 0 && (
                 <Stepper

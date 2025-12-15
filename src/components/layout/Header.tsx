@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Globe, Sun, Moon } from 'lucide-react';
+import { Globe, Sun, Moon, Shield, Wifi } from 'lucide-react';
 import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,13 +22,19 @@ export function Header() {
   };
   return (
     <header className="py-4 sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b">
-      <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-        <div className="flex items-center space-x-4 md:space-x-6">
-          <img src="https://imagedelivery.net/3_b412f08-sU2i2-0h-oQ/a85c8675-34ed-4375-251f-387ed53b5c00/public" alt="von Busch GmbH" className="h-7 md:h-8 transition-transform hover:scale-105" />
-          <span className="text-primary/30 text-2xl font-light">|</span>
-          <img src="https://imagedelivery.net/3_b412f08-sU2i2-0h-oQ/55d3542a-59a1-4c02-125a-243a24a82600/public" alt="Cloudflare" className="h-7 md:h-8 transition-transform hover:scale-105" />
-          <span className="text-primary/30 text-2xl font-light hidden sm:inline-block">|</span>
-          <img src="https://imagedelivery.net/3_b412f08-sU2i2-0h-oQ/a82b4a0a-814c-4a33-e116-0c21a1158400/public" alt="Ubiquiti" className="h-6 md:h-7 hidden sm:inline-block transition-transform hover:scale-105" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+        <div className="flex items-center space-x-2 md:space-x-4 text-sm">
+          <span className="font-semibold text-primary/90 transition-colors hover:text-primary">von Busch GmbH</span>
+          <span className="text-primary/30 text-xl font-light">|</span>
+          <div className="flex items-center gap-1.5 transition-colors hover:text-foreground">
+            <Shield className="h-5 w-5 text-blue-500" />
+            <span className="font-medium">Cloudflare</span>
+          </div>
+          <span className="text-primary/30 text-xl font-light hidden sm:inline-block">|</span>
+          <div className="hidden sm:flex items-center gap-1.5 transition-colors hover:text-foreground">
+            <Wifi className="h-4 w-4 text-green-500" />
+            <span className="font-medium">Ubiquiti</span>
+          </div>
         </div>
         <div className="flex items-center space-x-1">
           <DropdownMenu>
