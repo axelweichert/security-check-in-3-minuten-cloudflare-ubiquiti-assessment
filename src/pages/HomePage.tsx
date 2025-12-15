@@ -173,17 +173,24 @@ export function HomePage() {
             className="text-center"
           >
             <Card className="p-8 md:p-12 shadow-lg">
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tighter text-gradient-primary">{t('app.title')}</h1>
-                <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">{t('app.subtitle')}</p>
-                <Button size="lg" className="mt-8 btn-cyber" onClick={nextStep}>
-                  {t('app.start_check')}
-                </Button>
-                <div className="mt-6 text-sm text-muted-foreground">
-                  <p>{t('app.germany_attacked_info')}</p>
-                  <a href="https://radar.cloudflare.com/de-de/reports/ddos-2025-q3" target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-primary hover:underline">
-                    {t('app.discover_report')}
-                  </a>
-                </div>
+                <CardContent className="p-0 space-y-6">
+                    <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tighter text-gradient-primary">{t('app.title')}</h1>
+                    <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">{t('app.subtitle')}</p>
+                    <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} className="space-y-3 text-center max-w-md mx-auto">
+                       <Card className="shadow-md border-primary/30 bg-accent/50 p-6 md:p-8 rounded-xl">
+                         <CardContent className="p-0 space-y-3">
+                           <h3 className="text-2xl font-bold text-foreground">{t('app.germany_attacked_info')}</h3>
+                           <p className="text-sm text-muted-foreground">{t('app.report_source')}</p>
+                           <Button asChild size="lg" className="w-full btn-cyber">
+                             <a href="https://radar.cloudflare.com/de-de/reports/ddos-2025-q3" target="_blank" rel="noopener noreferrer">{t('app.discover_report')}</a>
+                           </Button>
+                         </CardContent>
+                       </Card>
+                    </motion.div>
+                    <Button size="lg" className="mt-6 btn-cyber" onClick={nextStep}>
+                      {t('app.start_check')}
+                    </Button>
+                </CardContent>
             </Card>
           </motion.div>
         );

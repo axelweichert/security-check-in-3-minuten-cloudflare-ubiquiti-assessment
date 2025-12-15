@@ -1,4 +1,5 @@
 import { StrictMode, lazy, Suspense } from 'react';
+import { createRoot, Root } from 'react-dom/client';
 import {
   createBrowserRouter,
   RouterProvider,
@@ -51,6 +52,8 @@ const router = createBrowserRouter([
     errorElement: <RouteErrorBoundary />,
   },
 ]);
+const container = document.getElementById('root')!;
+let root: Root | null = null;
 const App = () => (
   <StrictMode>
     <QueryClientProvider client={queryClient}>
@@ -60,4 +63,10 @@ const App = () => (
     </QueryClientProvider>
   </StrictMode>
 );
+if (container) {
+  if (!root) {
+    root = createRoot(container);
+  }
+  root.render(<App />);
+}
 export default App;
