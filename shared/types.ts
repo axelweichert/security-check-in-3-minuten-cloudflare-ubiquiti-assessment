@@ -66,3 +66,6 @@ export interface GetLeadResponse {
   answers: LeadAnswer[];
   scores: LeadScore;
 }
+export interface LeadListItem extends Lead {
+  risk_level?: 'low' | 'medium' | 'high';
+}

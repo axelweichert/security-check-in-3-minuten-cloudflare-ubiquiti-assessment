@@ -36,48 +36,48 @@ export class ChatBoardEntity extends IndexedEntity<ChatBoardState> {
 export class LeadEntity extends IndexedEntity<Lead> {
   static readonly entityName = "lead";
   static readonly indexName = "leads";
-  static readonly initialState: Lead = { 
-    id: "", 
-    created_at: "", 
-    language: "de", 
-    company_name: "", 
-    contact_name: "", 
-    employee_range: "", 
-    email: "", 
-    phone: "", 
-    consent_contact: 0, 
-    consent_tracking: 0, 
-    discount_opt_in: 0, 
-    status: "new" 
+  static readonly initialState: Lead = {
+    id: "",
+    created_at: "",
+    language: "de",
+    company_name: "",
+    contact_name: "",
+    employee_range: "",
+    email: "",
+    phone: "",
+    consent_contact: 0,
+    consent_tracking: 0,
+    discount_opt_in: 0,
+    status: "new"
   };
   static seedData: Lead[] = [];
 }
 export class LeadAnswerEntity extends IndexedEntity<LeadAnswer> {
   static readonly entityName = "lead_answer";
   static readonly indexName = "lead_answers";
-  static keyOf(state: LeadAnswer): string { return `${state.lead_id}_${state.question_key}`; }
-  static readonly initialState: LeadAnswer = { 
-    lead_id: "", 
-    question_key: "", 
-    answer_value: "", 
-    score_value: 0 
+  static readonly initialState: LeadAnswer = {
+    id: "",
+    lead_id: "",
+    question_key: "",
+    answer_value: "",
+    score_value: 0
   };
   static seedData: LeadAnswer[] = [];
 }
 export class LeadScoreEntity extends IndexedEntity<LeadScore> {
   static readonly entityName = "lead_score";
   static readonly indexName = "lead_scores";
-  static keyOf(state: LeadScore): string { return state.lead_id; }
-  static readonly initialState: LeadScore = { 
-    lead_id: "", 
-    score_vpn: 0, 
-    score_web: 0, 
-    score_awareness: 0, 
-    score_stack: 0, 
-    score_zero_trust: 0, 
-    score_total: 0, 
-    risk_level: "high" as const, 
-    best_practice_architecture: 0 
+  static readonly initialState: LeadScore = {
+    id: "",
+    lead_id: "",
+    score_vpn: 0,
+    score_web: 0,
+    score_awareness: 0,
+    score_stack: 0,
+    score_zero_trust: 0,
+    score_total: 0,
+    risk_level: "high" as const,
+    best_practice_architecture: 0
   };
   static seedData: LeadScore[] = [];
 }

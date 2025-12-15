@@ -10,13 +10,12 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, Eye, Filter as FilterIcon } from 'lucide-react';
+import { Download, Eye } from 'lucide-react';
 const riskLevelColors: Record<string, string> = {
-  low: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-300/50',
-  medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-300/50',
-  high: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-300/50',
+  low: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+  medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
+  high: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
 };
 export default function AdminPage() {
   const { t } = useTranslation();
@@ -41,7 +40,7 @@ export default function AdminPage() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">{t('admin.title')}</h1>
-        <Button asChild className="btn-cyber">
+        <Button asChild className="bg-[#F48120] hover:bg-[#F48120]/90 text-white">
           <a href={`/api/leads/export.csv?${queryParams}`} download>
             <Download className="mr-2 h-4 w-4" />
             {t('admin.export_csv')}
@@ -49,28 +48,41 @@ export default function AdminPage() {
         </Button>
       </div>
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><FilterIcon className="h-5 w-5" /> {t('admin.filters.title')}</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-end">
-          <div className="space-y-2"><Label htmlFor="from">{t('admin.filters.date_from')}</Label><Input id="from" type="date" value={searchParams.get('from') || ''} onChange={e => handleFilterChange('from', e.target.value)} /></div>
-          <div className="space-y-2"><Label htmlFor="to">{t('admin.filters.date_to')}</Label><Input id="to" type="date" value={searchParams.get('to') || ''} onChange={e => handleFilterChange('to', e.target.value)} /></div>
-          <div className="space-y-2"><Label>{t('admin.filters.status')}</Label><Select value={searchParams.get('status') || 'all'} onValueChange={v => handleFilterChange('status', v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="all">{t('admin.filters.status.all')}</SelectItem><SelectItem value="new">{t('admin.filters.status.new')}</SelectItem><SelectItem value="done">{t('admin.filters.status.done')}</SelectItem></SelectContent>
-          </Select></div>
-          <div className="space-y-2"><Label>{t('admin.filters.risk')}</Label><Select value={searchParams.get('risk') || 'all'} onValueChange={v => handleFilterChange('risk', v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="all">{t('admin.filters.risk.all')}</SelectItem><SelectItem value="low">{t('admin.filters.risk.low')}</SelectItem><SelectItem value="medium">{t('admin.filters.risk.medium')}</SelectItem><SelectItem value="high">{t('admin.filters.risk.high')}</SelectItem></SelectContent>
-          </Select></div>
-          <div className="space-y-2"><Label>{t('admin.filters.discount')}</Label><Select value={searchParams.get('discount') || 'all'} onValueChange={v => handleFilterChange('discount', v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="all">{t('admin.filters.discount.all')}</SelectItem><SelectItem value="yes">{t('admin.filters.discount.yes')}</SelectItem><SelectItem value="no">{t('admin.filters.discount.no')}</SelectItem></SelectContent>
-          </Select></div>
-          <Button variant="outline" onClick={clearFilters}>{t('admin.filters.clear')}</Button>
+        <CardHeader><CardTitle>{t('admin.filters.title')}</CardTitle></CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Input type="date" placeholder={t('admin.filters.date_from')} value={searchParams.get('from') || ''} onChange={e => handleFilterChange('from', e.target.value)} />
+          <Input type="date" placeholder={t('admin.filters.date_to')} value={searchParams.get('to') || ''} onChange={e => handleFilterChange('to', e.target.value)} />
+          <Select value={searchParams.get('status') || 'all'} onValueChange={v => handleFilterChange('status', v)}>
+            <SelectTrigger><SelectValue placeholder={t('admin.filters.status')} /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('admin.filters.status.all')}</SelectItem>
+              <SelectItem value="new">{t('admin.filters.status.new')}</SelectItem>
+              <SelectItem value="done">{t('admin.filters.status.done')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={searchParams.get('risk') || 'all'} onValueChange={v => handleFilterChange('risk', v)}>
+            <SelectTrigger><SelectValue placeholder={t('admin.filters.risk')} /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('admin.filters.risk.all')}</SelectItem>
+              <SelectItem value="low">{t('admin.filters.risk.low')}</SelectItem>
+              <SelectItem value="medium">{t('admin.filters.risk.medium')}</SelectItem>
+              <SelectItem value="high">{t('admin.filters.risk.high')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={searchParams.get('discount') || 'all'} onValueChange={v => handleFilterChange('discount', v)}>
+            <SelectTrigger><SelectValue placeholder={t('admin.filters.discount')} /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('admin.filters.discount.all')}</SelectItem>
+              <SelectItem value="yes">{t('admin.filters.discount.yes')}</SelectItem>
+              <SelectItem value="no">{t('admin.filters.discount.no')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={clearFilters} className="col-start-1">{t('admin.filters.clear')}</Button>
         </CardContent>
       </Card>
       <Card>
         <CardHeader><CardTitle>{t('admin.leads')}</CardTitle></CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
@@ -79,7 +91,7 @@ export default function AdminPage() {
                 <TableHead>{t('admin.table.status')}</TableHead>
                 <TableHead>{t('admin.table.risk')}</TableHead>
                 <TableHead>{t('admin.table.discount')}</TableHead>
-                <TableHead className="text-right">{t('admin.table.actions')}</TableHead>
+                <TableHead>{t('admin.table.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -93,14 +105,14 @@ export default function AdminPage() {
                 <TableRow><TableCell colSpan={6} className="text-center">No leads found.</TableCell></TableRow>
               ) : (
                 data?.items.map(lead => (
-                  <TableRow key={lead.id} className="hover:bg-accent/50 transition-colors">
+                  <TableRow key={lead.id}>
                     <TableCell className="font-medium">{lead.company_name}</TableCell>
                     <TableCell>{new Date(lead.created_at).toLocaleDateString()}</TableCell>
                     <TableCell><Badge variant={lead.status === 'new' ? 'default' : 'secondary'}>{lead.status}</Badge></TableCell>
                     <TableCell><Badge className={riskLevelColors[lead.risk_level || '']}>{lead.risk_level}</Badge></TableCell>
                     <TableCell>{lead.discount_opt_in ? t('admin.filters.discount.yes') : t('admin.filters.discount.no')}</TableCell>
-                    <TableCell className="text-right">
-                      <Button asChild variant="ghost" size="icon" className="hover:scale-110 transition-transform">
+                    <TableCell>
+                      <Button asChild variant="ghost" size="icon">
                         <Link to={`/admin/leads/${lead.id}`}><Eye className="h-4 w-4" /></Link>
                       </Button>
                     </TableCell>
