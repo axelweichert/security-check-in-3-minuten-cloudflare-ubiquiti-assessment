@@ -53,7 +53,7 @@ export default function ResultPage() {
   const { t, i18n } = useTranslation();
   const { data, isLoading, error } = useQuery<GetLeadResponse>({
     queryKey: ['lead', leadId],
-    queryFn: () => api(`/api/result/`),
+    queryFn: () => api(`/api/result/${leadId}`),
     enabled: !!leadId,
   });
   useEffect(() => {
