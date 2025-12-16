@@ -76,7 +76,7 @@ export function HomePage() {
       }
     };
     try {
-      const lead = await api<Lead>('/api/leads', {
+      const lead = await api<Lead>('/api/submit', {
         method: 'POST',
         body: JSON.stringify(data),
       });
