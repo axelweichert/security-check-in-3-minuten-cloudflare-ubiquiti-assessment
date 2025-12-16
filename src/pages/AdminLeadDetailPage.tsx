@@ -144,6 +144,7 @@ export default function AdminLeadDetailPage() {
   if (error || !data) return <div className="text-destructive text-center p-8">Error loading lead details.</div>;
 
   const { lead, scores } = data;
+  const safeScores = (scores ?? { risk_level: 'medium', points: 0 });
 
   // IMPORTANT: scores can be null (your API currently returns scores: null)
   const riskLevel = (scores && (scores as any).risk_level) ? (scores as any).risk_level : 'medium';
