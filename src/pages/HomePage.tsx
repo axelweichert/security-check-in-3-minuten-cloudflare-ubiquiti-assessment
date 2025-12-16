@@ -66,15 +66,21 @@ export function HomePage() {
     });
   }, [currentStep, answers]);
   const handleSubmit = async () => {
-    const data = {
+    const payload: any = {
+      ...answers,
       language: useFunnelStore.getState().language,
-      formData: {
-        ...answers,
-        consent_contact: answers.consent_contact === '1' ? 1 : 0,
-        consent_tracking: answers.consent_tracking === '1' ? 1 : 0,
-        discount_opt_in: answers.discount_opt_in === '1' ? 1 : 0,
-      }
+      // Defaults / Normalisierung (damit D1 NOT NULL nie wieder nervt)
+      phone: (answers.phone && String(answers.phone).trim().length > 0) ? String(answers.phone).trim() : 'n/a',
+      employee_range: answers.employee_range ?? 'unknown',
+      firewall_vendor: answers.firewall_vendor ?? 'unknown',
+      vpn_technology: answers.vpn_technology ?? 'unknown',
+      zero_trust_vendor: answers.zero_trust_vendor ?? 'unknown',
+      // Consents sicher als boolean/int (beides wird serverseitig gut handelbar)
+      consent_contact: answers.consent_contact === '1' ? true : !!answers.consent_contact,
+      consent_tracking: answers.consent_tracking === '1' ? true : !!answers.consent_tracking,
+      discount_opt_in: answers.discount_opt_in === '1' ? true : !!answers.discount_opt_in,
     };
+
     try {
       const res = await api<any>('/api/submit', {
         method: 'POST',
