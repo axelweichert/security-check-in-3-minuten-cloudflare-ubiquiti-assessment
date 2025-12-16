@@ -1,54 +1,60 @@
-export const onRequestGet: PagesFunction = async ({ env, params }) => {
-  const json = (status: number, body: unknown) =>
-    new Response(JSON.stringify(body), {
-      status,
-      headers: { "content-type": "application/json; charset=utf-8" },
-    });
+import { computeScores } from '../../../shared/scoring';
 
-  try {
-    const id = String((params as any)?.id ?? "").trim();
-    if (!id) return json(400, { ok: false, error: "Missing lead id" });
+type Env = {
+  DB: D1Database;
+};
 
-    const db = (env as any).DB;
-    if (!db) return json(500, { ok: false, error: "D1 binding DB missing on env" });
+function json(status: number, body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json; charset=utf-8' },
+  });
+}
 
-    // 1) Lead
-    const lead = await db
-      .prepare("SELECT * FROM leads WHERE id = ? LIMIT 1")
-      .bind(id)
-      .first();
+export const onRequestGet: PagesFunction<Env> = async (ctx) => {
+  const id = ctx.params.id as string | undefined;
+  if (!id) return json(400, { ok: false, error: 'Missing lead id' });
 
-    if (!lead) return json(404, { ok: false, error: "Lead not found" });
+  // Lead
+  const lead = await ctx.env.DB.prepare(
+    `SELECT
+      id, created_at, language, company_name, contact_name, employee_range,
+      email, phone, firewall_vendor, vpn_technology, zero_trust_vendor,
+      consent_contact, consent_tracking, discount_opt_in,
+      status, done_at
+     FROM leads
+     WHERE id = ?`
+  ).bind(id).first<any>();
 
-    // 2) Optional: Answers (falls Tabelle existiert)
-    let answers: any[] = [];
-    try {
-      const a = await db
-        .prepare("SELECT question, answer FROM lead_answers WHERE lead_id = ? ORDER BY question")
-        .bind(id)
-        .all();
-      answers = a?.results ?? [];
-    } catch {
-      answers = [];
-    }
+  if (!lead) return json(404, { ok: false, error: 'Lead not found' });
 
-    // 3) Optional: Scores (falls Tabelle existiert)
-    let scores: any = null;
-    try {
-      scores = await db
-        .prepare("SELECT * FROM lead_scores WHERE lead_id = ? LIMIT 1")
-        .bind(id)
-        .first();
-    } catch {
-      scores = null;
-    }
+  // Answers
+  const answersRes = await ctx.env.DB.prepare(
+    `SELECT id, lead_id, question_key, answer_value, created_at
+     FROM lead_answers
+     WHERE lead_id = ?
+     ORDER BY created_at ASC`
+  ).bind(id).all<any>();
 
-    return json(200, { ok: true, item: { lead, answers, scores } });
-  } catch (e: any) {
-    return json(500, {
-      ok: false,
-      error: "Lead detail failed",
-      message: e?.message ?? String(e),
-    });
-  }
+  const answers = answersRes.results ?? [];
+
+  // Scores (serverseitig, nie null)
+  const scores = computeScores({
+    lead: {
+      employee_range: lead.employee_range,
+      firewall_vendor: lead.firewall_vendor,
+      vpn_technology: lead.vpn_technology,
+      zero_trust_vendor: lead.zero_trust_vendor,
+    },
+    answers: answers.map((a: any) => ({ question_key: a.question_key, answer_value: a.answer_value })),
+  });
+
+  return json(200, {
+    ok: true,
+    item: {
+      lead,
+      answers,
+      scores,
+    },
+  });
 };

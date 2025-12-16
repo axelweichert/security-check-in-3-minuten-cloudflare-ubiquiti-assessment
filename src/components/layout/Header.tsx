@@ -26,7 +26,7 @@ export function Header() {
         <div className="flex items-center space-x-2 md:space-x-4 text-sm md:text-base">
           <a href="https://www.vonbusch.digital" target="_blank" rel="noopener noreferrer" className="group transition-colors duration-200 hover:text-primary/90 flex items-center gap-1.5">
             <Layers className="h-5 w-5 flex-shrink-0 opacity-80 text-black dark:text-white" />
-            <span className="font-semibold">von Busch GmbH</span>
+            <span className="font-semibold">vonBusch</span>
           </a>
           <span className="text-muted-foreground/50 text-xl font-light hidden sm:inline-block">|</span>
           <a href="https://www.hxnwrk.de" target="_blank" rel="noopener noreferrer" className="hidden sm:flex items-center gap-1.5 group transition-colors duration-200 hover:text-primary/90">
