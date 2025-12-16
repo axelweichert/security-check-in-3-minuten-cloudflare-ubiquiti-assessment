@@ -81,7 +81,7 @@ export function HomePage() {
         body: JSON.stringify(data),
       });
       toast.success(t('app.submit_success'));
-      navigate(`/result/${lead.id}`);
+      navigate(`/result/${res.lead_id}`);
       reset();
     } catch (e) {
       const msg = e instanceof Error ? e.message : t('app.submit_error');

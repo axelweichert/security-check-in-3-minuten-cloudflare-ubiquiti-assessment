@@ -53,7 +53,7 @@ export default function ResultPage() {
   const { t, i18n } = useTranslation();
   const { data, isLoading, error } = useQuery<GetLeadResponse>({
     queryKey: ['lead', leadId],
-    queryFn: () => api(`/api/leads/${leadId}`),
+    queryFn: () => api(`/api/result/`),
     enabled: !!leadId,
   });
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function ResultPage() {
     if (!leadId) return;
     const toastId = toast.loading(t('pdf.loading'));
     try {
-      const response = await fetch(`/api/leads/${leadId}/pdf`, {
+      const response = await fetch(`/api/result//pdf`, {
         headers: { 'Cache-Control': 'no-cache' },
       });
       if (!response.ok) {
