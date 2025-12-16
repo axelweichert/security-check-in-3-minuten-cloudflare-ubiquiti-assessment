@@ -22,7 +22,7 @@ export async function onRequestGet({ params, env }: any) {
         `SELECT
           id, language, company_name, contact_name, employee_range,
           email, phone, firewall_vendor, vpn_technology, zero_trust_vendor,
-          consent_contact, consent_tracking, discount_opt_in, status, done_at, risk_level
+          consent_contact, consent_tracking, discount_opt_in, status, done_at
         FROM leads
         WHERE id = ?1
         LIMIT 1`
