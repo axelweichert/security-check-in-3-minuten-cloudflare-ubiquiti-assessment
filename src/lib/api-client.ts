@@ -1,6 +1,11 @@
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  // ALWAYS same-origin in browser
   const res = await fetch(path, {
-    credentials: 'include', // <<< DAS WAR DER FEHLENDE TEIL
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...(init?.headers || {}),
@@ -15,8 +20,8 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
   const json = await res.json();
 
-  if (json?.ok === false) {
-    throw new Error(json.message || json.error || 'Request failed');
+  if (!isObject(json) || json.ok !== true) {
+    throw new Error(json?.error || json?.message || 'API error');
   }
 
   if ('items' in json) return json.items as T;
