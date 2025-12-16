@@ -16,7 +16,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
   try {
     // lead: NUR das, was ResultPage braucht (keine Admin-PII wie Email/Telefon)
     const lead = await env.DB.prepare(
-      `SELECT id, created_at, language, company_name, employee_range,
+      `SELECT id, language, company_name, employee_range,
               firewall_vendor, vpn_technology, zero_trust_vendor
        FROM leads WHERE id = ? LIMIT 1`
     ).bind(id).first<any>();
@@ -24,9 +24,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     if (!lead) return j(404, { ok: false, error: "Lead not found" });
 
     const answers = await env.DB.prepare(
-      `SELECT id, lead_id, question_key, answer_value, created_at
+      `SELECT id, lead_id, question_key, answer_value
        FROM lead_answers WHERE lead_id = ?
-       ORDER BY created_at ASC`
+       ORDER BY id ASC`
     ).bind(id).all<any>();
 
     // scores optional – falls Tabelle/Row fehlt, liefern wir ein Default-Objekt damit UI nicht crasht

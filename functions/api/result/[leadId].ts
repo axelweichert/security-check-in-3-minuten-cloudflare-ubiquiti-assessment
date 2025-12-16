@@ -20,7 +20,7 @@ export async function onRequestGet({ params, env }: any) {
     const lead = await db
       .prepare(
         `SELECT
-          id, created_at, language, company_name, contact_name, employee_range,
+          id, language, company_name, contact_name, employee_range,
           email, phone, firewall_vendor, vpn_technology, zero_trust_vendor,
           consent_contact, consent_tracking, discount_opt_in, status, done_at, risk_level
         FROM leads
