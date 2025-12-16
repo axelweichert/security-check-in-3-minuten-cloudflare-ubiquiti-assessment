@@ -84,7 +84,7 @@ export function HomePage() {
     try {
       const res = await api<any>('/api/submit', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       toast.success(t('app.submit_success'));
       const leadId = (res?.lead_id ?? res?.leadId ?? res?.id) as string | undefined;
