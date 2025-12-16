@@ -182,7 +182,7 @@ export default function ResultPage() {
                             {t('result.pdf_btn')}
                         </Button>
                         <Button asChild size="lg" variant="outline" className="w-full">
-                            <a href="https://outlook.office.com/book/vonBuschGmbHCloudflare@vonbusch.digital/?ismsaljsauthenabled=true" target="_blank" rel="noopener noreferrer">
+                            <a href="https://outlook.office.com/book/von Busch GmbHGmbHCloudflare@vonbusch.digital/?ismsaljsauthenabled=true" target="_blank" rel="noopener noreferrer">
                             {t('result.book_btn')}
                             </a>
                         </Button>
