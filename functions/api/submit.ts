@@ -52,31 +52,39 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   try {
     // IMPORTANT: updated_at is NOT in your schema, so do not reference it.
-    await env.DB.prepare(
-      `INSERT INTO leads (id, company_name, contact_name, email, phone, employee_range,
-                          firewall_vendor, vpn_technology, zero_trust_vendor,
-                          consent_contact, consent_tracking, discount_opt_in,
-                          created_at, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-      .bind(
-        leadId,
-        body.company_name,
-        body.contact_name,
-        body.email,
-        body.phone ?? null,
-        body.employee_range ?? null,
-        body.firewall_vendor ?? null,
-        body.vpn_technology ?? null,
-        body.zero_trust_vendor ?? null,
-        body.consent_contact ? 1 : 0,
-        body.consent_tracking ? 1 : 0,
-        body.discount_opt_in ? 1 : 0,
-        now,
-        "new"
-      )
-      .run();
+const lang =
+  (body as any).language ??
+  (request.headers.get("accept-language")?.toLowerCase().startsWith("fr")
+    ? "fr"
+    : request.headers.get("accept-language")?.toLowerCase().startsWith("en")
+      ? "en"
+      : "de");
 
+await env.DB.prepare(
+  `INSERT INTO leads (id, company_name, contact_name, email, phone, employee_range,
+                      firewall_vendor, vpn_technology, zero_trust_vendor,
+                      consent_contact, consent_tracking, discount_opt_in,
+                      created_at, status, language)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+)
+  .bind(
+    leadId,
+    body.company_name,
+    body.contact_name,
+    body.email,
+    body.phone ?? null,
+    body.employee_range ?? null,
+    body.firewall_vendor ?? null,
+    body.vpn_technology ?? null,
+    body.zero_trust_vendor ?? null,
+    body.consent_contact ? 1 : 0,
+    body.consent_tracking ? 1 : 0,
+    body.discount_opt_in ? 1 : 0,
+    now,
+    "new",
+    lang
+  )
+  .run();
     if (body.answers && typeof body.answers === "object") {
       for (const [question, answer] of Object.entries(body.answers)) {
         await env.DB.prepare(
