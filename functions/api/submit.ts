@@ -72,7 +72,7 @@ await env.DB.prepare(
     body.company_name,
     body.contact_name,
     body.email,
-    body.phone ?? null,
+    (body.phone && body.phone.trim().length > 0) ? body.phone.trim() : "n/a",
     body.employee_range ?? "unknown",
     body.firewall_vendor ?? null,
     body.vpn_technology ?? null,
