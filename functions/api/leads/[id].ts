@@ -1,60 +1,61 @@
-import { computeScores } from '../../../shared/scoring';
+export async function onRequestGet({ env, params }: any) {
+  try {
+    const leadId = params?.id;
+    if (!leadId) {
+      return new Response(JSON.stringify({ ok: false, error: 'Missing lead id' }), {
+        status: 400,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
 
-type Env = {
-  DB: D1Database;
-};
+    if (!env || !env.DB) {
+      return new Response(JSON.stringify({ ok: false, error: 'DB binding missing' }), {
+        status: 500,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
 
-function json(status: number, body: unknown) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json; charset=utf-8' },
-  });
+    const lead = await env.DB
+      .prepare('SELECT * FROM leads WHERE id = ? LIMIT 1')
+      .bind(leadId)
+      .first();
+
+    if (!lead) {
+      return new Response(JSON.stringify({ ok: false, error: 'Lead not found' }), {
+        status: 404,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
+    let answers = [];
+    try {
+      const r = await env.DB
+        .prepare('SELECT * FROM lead_answers WHERE lead_id = ?')
+        .bind(leadId)
+        .all();
+      answers = r?.results ?? [];
+    } catch (_) {}
+
+    let scores = null;
+    try {
+      scores = await env.DB
+        .prepare('SELECT * FROM lead_scores WHERE lead_id = ? LIMIT 1')
+        .bind(leadId)
+        .first();
+    } catch (_) {}
+
+    return new Response(
+      JSON.stringify({ ok: true, item: { lead, answers, scores } }),
+      { status: 200, headers: { 'content-type': 'application/json' } }
+    );
+  } catch (err: any) {
+    return new Response(
+      JSON.stringify({
+        ok: false,
+        error: 'Unhandled exception',
+        message: String(err?.message || err),
+      }),
+      { status: 500, headers: { 'content-type': 'application/json' } }
+    );
+  }
 }
-
-export const onRequestGet: PagesFunction<Env> = async (ctx) => {
-  const id = ctx.params.id as string | undefined;
-  if (!id) return json(400, { ok: false, error: 'Missing lead id' });
-
-  // Lead
-  const lead = await ctx.env.DB.prepare(
-    `SELECT
-      id, created_at, language, company_name, contact_name, employee_range,
-      email, phone, firewall_vendor, vpn_technology, zero_trust_vendor,
-      consent_contact, consent_tracking, discount_opt_in,
-      status, done_at
-     FROM leads
-     WHERE id = ?`
-  ).bind(id).first<any>();
-
-  if (!lead) return json(404, { ok: false, error: 'Lead not found' });
-
-  // Answers
-  const answersRes = await ctx.env.DB.prepare(
-    `SELECT id, lead_id, question_key, answer_value, created_at
-     FROM lead_answers
-     WHERE lead_id = ?
-     ORDER BY created_at ASC`
-  ).bind(id).all<any>();
-
-  const answers = answersRes.results ?? [];
-
-  // Scores (serverseitig, nie null)
-  const scores = computeScores({
-    lead: {
-      employee_range: lead.employee_range,
-      firewall_vendor: lead.firewall_vendor,
-      vpn_technology: lead.vpn_technology,
-      zero_trust_vendor: lead.zero_trust_vendor,
-    },
-    answers: answers.map((a: any) => ({ question_key: a.question_key, answer_value: a.answer_value })),
-  });
-
-  return json(200, {
-    ok: true,
-    item: {
-      lead,
-      answers,
-      scores,
-    },
-  });
-};
