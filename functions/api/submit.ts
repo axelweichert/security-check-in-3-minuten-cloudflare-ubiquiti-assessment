@@ -47,6 +47,29 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const leadId = crypto.randomUUID();
 
     // IMPORTANT: if this throws, we will now SEE the real SQLite/D1 error.
+await env.DB.prepare(
+  `INSERT INTO leads (id, company_name, contact_name, email, phone, employee_range,
+                      firewall_vendor, vpn_technology, zero_trust_vendor,
+                      consent_contact, consent_tracking, discount_opt_in,
+                      created_at, status)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+).bind(
+  leadId,
+  body.company_name,
+  body.contact_name,
+  body.email,
+  body.phone ?? null,
+  body.employee_range ?? null,
+  body.firewall_vendor ?? null,
+  body.vpn_technology ?? null,
+  body.zero_trust_vendor ?? null,
+  body.consent_contact ? 1 : 0,
+  body.consent_tracking ? 1 : 0,
+  body.discount_opt_in ? 1 : 0,
+  now,
+  "new"
+).run();
+
     await env.DB.prepare(
       `INSERT INTO leads (id, company_name, contact_name, email, phone, employee_range,
                           firewall_vendor, vpn_technology, zero_trust_vendor,
@@ -70,33 +93,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       now,
       "new"
     ).run();
-
-    if (body.answers && typeof body.answers === "object") {
-      for (const [question, answer] of Object.entries(body.answers)) {
-        await env.DB.prepare(
-          `INSERT INTO lead_answers (lead_id, question_key, answer_value, created_at)
-           VALUES (?, ?, ?, ?)`
-        ).bind(
-          leadId,
-          question,
-          typeof answer === "string" ? answer : JSON.stringify(answer),
-          now
-        ).run();
-      }
-    }
-
-    if (body.score) {
-      await env.DB.prepare(
-        `INSERT INTO lead_scores (lead_id, total, percent, rating, breakdown_json, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`
-      ).bind(
-        leadId,
-        body.score.total ?? 0,
-        body.score.percent ?? 0,
-        body.score.rating ?? "medium",
-        JSON.stringify(body.score.breakdown ?? {}),
-        now
-      ).run();
     }
 
     return json(200, { ok: true, lead_id: leadId });
