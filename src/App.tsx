@@ -44,7 +44,7 @@ const router = createBrowserRouter([
     element: (
       <AppLayout container>
         <Suspense fallback={<AdminSuspenseFallback />}>
-          <AdminLeadDetailPage />
+          <Suspense fallback={<div className="p-6">Loading…</div>}><AdminLeadDetailPage /></Suspense>
         </Suspense>
       </AppLayout>
     ),
