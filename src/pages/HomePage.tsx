@@ -81,6 +81,8 @@ export function HomePage() {
         body: JSON.stringify(data),
       });
       toast.success(t('app.submit_success'));
+      const leadId = (res?.lead_id ?? res?.leadId ?? res?.id) as string | undefined;
+      if (!leadId) throw new Error("Missing lead_id from /api/submit response");
       navigate(`/result/${leadId}`);
       reset();
     } catch (e) {
