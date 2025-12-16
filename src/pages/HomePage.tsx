@@ -76,12 +76,12 @@ export function HomePage() {
       }
     };
     try {
-      const lead = await api<Lead>('/api/submit', {
+      const res = await api<any>('/api/submit', {
         method: 'POST',
         body: JSON.stringify(data),
       });
       toast.success(t('app.submit_success'));
-      navigate(`/result/${res.lead_id}`);
+      navigate(`/result/${leadId}`);
       reset();
     } catch (e) {
       const msg = e instanceof Error ? e.message : t('app.submit_error');
