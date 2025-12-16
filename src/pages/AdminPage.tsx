@@ -22,9 +22,9 @@ export default function AdminPage() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryParams = useMemo(() => searchParams.toString(), [searchParams]);
-  const { data, isLoading, error } = useQuery<{ items: LeadListItem[] }>({
+  const { data, isLoading, error } = useQuery<LeadListItem[]>({
     queryKey: ['leads', queryParams],
-    queryFn: () => api(`/api/leads?${queryParams}`),
+    queryFn: () => api<LeadListItem[]>(`/api/leads?${queryParams}`),
   });
   const handleFilterChange = (key: string, value: string) => {
     setSearchParams(prev => {
@@ -89,10 +89,10 @@ export default function AdminPage() {
                 ))
               ) : error ? (
                 <TableRow><TableCell colSpan={6} className="text-center text-destructive">Error loading leads.</TableCell></TableRow>
-              ) : data?.items.length === 0 ? (
+              ) : data.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center">No leads found.</TableCell></TableRow>
               ) : (
-                data?.items.map(lead => (
+                data.map(lead => (
                   <TableRow key={lead.id} className="hover:bg-accent/50 transition-colors">
                     <TableCell className="font-medium">{lead.company_name}</TableCell>
                     <TableCell>{new Date(lead.created_at).toLocaleDateString()}</TableCell>
