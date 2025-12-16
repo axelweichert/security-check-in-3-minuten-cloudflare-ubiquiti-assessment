@@ -1,53 +1,87 @@
-export async function onRequestGet({ params, env }: any) {
-  const json = (status: number, body: any) =>
-    new Response(JSON.stringify(body), {
-      status,
-      headers: { "content-type": "application/json; charset=utf-8" },
-    });
+import type { PagesFunction } from '@cloudflare/workers-types';
 
+function json(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'content-type': 'application/json; charset=utf-8' },
+  });
+}
+
+type RiskLevel = 'low' | 'medium' | 'high';
+
+function calcScores(answerMap: Map<string, string>) {
+  let score_vpn = 0;
+  let score_web = 0;
+  let score_awareness = 0;
+
+  // VPN (max 2)
+  if (answerMap.get('vpn_in_use') === 'yes') score_vpn++;
+  if (answerMap.get('remote_access_satisfaction') === 'good') score_vpn++;
+
+  // WEB (max 3)
+  if (answerMap.get('critical_processes_on_website') === 'no') score_web++;
+  if (answerMap.get('web_protection') && answerMap.get('web_protection') !== 'none') score_web++;
+  if (answerMap.get('security_incidents') === 'no') score_web++;
+
+  // Awareness (max 2)
+  if (answerMap.get('awareness_training') === 'yes') score_awareness++;
+  if (answerMap.get('infrastructure_resilience') === 'high') score_awareness++;
+
+  const totalRaw = score_vpn + score_web + score_awareness;
+  const score_total = Math.round((totalRaw / 7) * 100);
+
+  let risk_level: RiskLevel = 'high';
+  if (score_total >= 75) risk_level = 'low';
+  else if (score_total >= 40) risk_level = 'medium';
+
+  return {
+    score_total,
+    score_vpn,
+    score_web,
+    score_awareness,
+    risk_level,
+  };
+}
+
+export const onRequestGet: PagesFunction = async (ctx) => {
   try {
-    const leadId = String(params?.leadId || "").trim();
-    if (!leadId) return json(400, { ok: false, error: "Missing leadId" });
-
-    const db =
-      (env as any).DB ||
-      (env as any).D1 ||
-      (env as any).DATABASE ||
-      (env as any).SECURITYCHECK_DB;
-
-    if (!db) return json(500, { ok: false, error: "Missing D1 binding (DB)" });
+    const leadId = ctx.params.leadId as string;
+    const db = ctx.env.DB as D1Database;
 
     const lead = await db
-      .prepare(
-        `SELECT
-          id, language, company_name, contact_name, employee_range,
-          email, phone, firewall_vendor, vpn_technology, zero_trust_vendor,
-          consent_contact, consent_tracking, discount_opt_in, status, done_at
-        FROM leads
-        WHERE id = ?1
-        LIMIT 1`
-      )
+      .prepare(`SELECT * FROM leads WHERE id = ?`)
       .bind(leadId)
       .first();
 
-    if (!lead) return json(404, { ok: false, error: "Lead not found" });
+    if (!lead) {
+      return json({ ok: false, error: 'Lead not found' }, 404);
+    }
 
     const answersRes = await db
-      .prepare(
-        `SELECT id, lead_id, question_key, answer_value
-         FROM lead_answers
-         WHERE lead_id = ?1
-         ORDER BY id ASC`
-      )
+      .prepare(`SELECT question_key, answer_value FROM lead_answers WHERE lead_id = ?`)
       .bind(leadId)
       .all();
 
-    const answers = (answersRes?.results || []) as any[];
+    const answers = answersRes.results ?? [];
+    const map = new Map<string, string>();
+    for (const a of answers) {
+      map.set(a.question_key, a.answer_value);
+    }
 
-    const scores = { risk_level: (lead as any).risk_level || "medium" };
+    const scores = calcScores(map);
 
-    return json(200, { ok: true, item: { lead, answers, scores } });
-  } catch (e: any) {
-    return json(500, { ok: false, error: "Result fetch failed", message: e?.message || String(e) });
+    return json({
+      ok: true,
+      item: {
+        lead,
+        answers,
+        scores,
+      },
+    });
+  } catch (err) {
+    return json(
+      { ok: false, error: 'Result fetch failed', message: String(err) },
+      500
+    );
   }
-}
+};
