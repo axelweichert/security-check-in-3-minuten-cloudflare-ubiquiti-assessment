@@ -9,3 +9,6 @@ dist/
 .wrangler/
 .vite/
 *.log
+
+.DS_Store
+functions/.DS_Store
