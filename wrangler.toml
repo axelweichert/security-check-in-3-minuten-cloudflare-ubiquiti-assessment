@@ -1,0 +1,8 @@
+name = "security-check-pages"
+compatibility_date = "2025-12-15"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "security-check"
+database_id = "b30506b8-d40c-45c7-afed-1371692f2cb6"
+
