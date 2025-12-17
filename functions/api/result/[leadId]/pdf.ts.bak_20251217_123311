@@ -1,110 +1,3 @@
-
-const QUESTION_LABELS: Record<string, string> = {
-  vpn_in_use: "VPN im Einsatz",
-  critical_processes_on_website: "Kritische Prozesse über die Website erreichbar",
-  awareness_training: "Security-Awareness / Schulungen",
-  vpn_solution: "VPN-Lösung",
-  vpn_users: "Anzahl VPN-Nutzer",
-  hosting_type: "Hosting",
-  web_protection: "Web-Schutz",
-  security_incidents: "Sicherheitsvorfälle in letzter Zeit",
-  remote_access_satisfaction: "Zufriedenheit Remote-Zugriff",
-  infrastructure_resilience: "Resilienz der IT-Infrastruktur",
-  financial_damage_risk: "Finanzielles Schadensrisiko",
-  firewall_vendor: "Firewall-Hersteller",
-  vpn_technology: "VPN-Technologie",
-  zero_trust_vendor: "Zero-Trust-Anbieter",
-  company_name: "Unternehmen",
-  contact_name: "Kontaktperson",
-  email: "E-Mail-Adresse",
-  phone: "Telefonnummer",
-  employee_range: "Mitarbeiteranzahl",
-  consent_contact: "Kontaktaufnahme erlaubt",
-  consent_tracking: "Tracking erlaubt",
-  discount_opt_in: "Rabatt-Informationen gewünscht",
-};
-
-const VALUE_LABELS: Record<string, Record<string, string>> = {
-  yes: { yes: "Ja", no: "Nein" },
-
-  awareness_training: { yes: "Ja", partially: "Teilweise", no: "Nein" },
-
-  remote_access_satisfaction: {
-    satisfied: "Zufrieden",
-    neutral: "Neutral",
-    unsatisfied: "Unzufrieden",
-  },
-
-  infrastructure_resilience: { high: "Hoch", medium: "Mittel", low: "Niedrig" },
-
-  financial_damage_risk: {
-    less_than_5k: "Unter 5.000 €",
-    "5k_to_25k": "5.000 – 25.000 €",
-    more_than_25k: "Über 25.000 €",
-  },
-
-  vpn_solution: {
-    dedicated_vpn: "Dedizierte VPN-Lösung",
-    firewall_vpn: "Firewall-VPN",
-    vpn_gateway: "VPN-Gateway",
-    zero_trust: "Zero Trust",
-    ztna: "ZTNA",
-    none: "Keine",
-  },
-
-  vpn_users: {
-    "1_9": "1–9",
-    less_than_10: "Unter 10",
-    "10_49": "10–49",
-    "10_to_50": "10–50",
-    "50_plus": "50+",
-    more_than_50: "Über 50",
-  },
-
-  hosting_type: {
-    cloud: "Cloud",
-    cloud_hosting: "Cloud Hosting",
-    managed_hosting: "Managed Hosting",
-    on_prem: "On-Premises",
-    saas: "SaaS",
-  },
-
-  web_protection: {
-    none: "Kein Schutz",
-    basic: "Basisschutz",
-    waf: "Web Application Firewall (WAF)",
-    waf_ddos: "WAF + DDoS-Schutz",
-    "waf+ddos": "WAF + DDoS-Schutz",
-  },
-
-  employee_range: {
-    "1_9": "1–9 Mitarbeiter",
-    "10_49": "10–49 Mitarbeiter",
-    "50_199": "50–199 Mitarbeiter",
-    "200_999": "200–999 Mitarbeiter",
-    "1000_plus": "1.000+ Mitarbeiter",
-  },
-
-  consent_contact: { "1": "Ja", "0": "Nein" },
-  consent_tracking: { "1": "Ja", "0": "Nein" },
-  discount_opt_in: { "1": "Ja", "0": "Nein" },
-
-  zero_trust_vendor: { no: "Keiner", cloudflare: "Cloudflare" },
-};
-
-function toGermanQA(key: string, value: unknown) {
-  const raw = String(value ?? "");
-  const question = QUESTION_LABELS[key] ?? key;
-
-  const perKey = VALUE_LABELS[key];
-  if (perKey && perKey[raw] != null) return { question, answer: perKey[raw] };
-
-  const yesNo = VALUE_LABELS.yes;
-  if (yesNo && yesNo[raw] != null) return { question, answer: yesNo[raw] };
-
-  return { question, answer: raw };
-}
-
 type Env = { DB: D1Database };
 
 const ANSWER_GROUPS = {
@@ -161,17 +54,12 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
       .bind(leadId)
       .all();
     const answers = (((ansRes as any).results ?? []) as any[]).map((a) => ({
-      question_key: a.question_label,
-      answer_value: a.answer_label,
+      question_key: a.question_key,
+      answer_value: a.answer_value,
     }));
 
-const printableAnswers = answers.map((a: any) => {
-  const { question, answer } = toGermanQA(a.question_label, a.answer_label);
-  return { ...a, question_label: question, answer_label: answer };
-});
-
     const answerMap = new Map<string, string>();
-    for (const a of printableAnswers) answerMap.set(a.question_label, a.answer_label);
+    for (const a of answers) answerMap.set(a.question_key, a.answer_value);
 
     const scores = computeScores(answerMap);
     const lang = sanitizeText(lead.language) || "de";
@@ -335,9 +223,9 @@ const printableAnswers = answers.map((a: any) => {
       curY -= (h + 6);
     };
 
-    for (const a of printableAnswers) {
-      const k = sanitizeText(a.question_label);
-      const v = sanitizeText(a.answer_label);
+    for (const a of answers) {
+      const k = sanitizeText(a.question_key);
+      const v = sanitizeText(a.answer_value);
       if (!k) continue;
       drawRow(k, v || "—");
     }
