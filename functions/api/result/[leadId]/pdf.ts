@@ -119,7 +119,27 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
   y -= 26;
 
   // Section title
-  page.drawText("Ihre Antworten", { x: marginX, y, size: 13, font: bold });
+  
+  // --- Gesamtergebnis
+  page.drawText("Gesamtergebnis", { x: marginX, y, size: 13, font: bold });
+  y -= 18;
+
+  page.drawText(`${scores.score_total}%`, { x: marginX, y, size: 26, font: bold });
+  y -= 22;
+
+  page.drawText(riskLabelDe(scores.risk_level), { x: marginX, y, size: 12, font: bold });
+  y -= 22;
+
+  page.drawText("Teilbereiche", { x: marginX, y, size: 12, font: bold });
+  y -= 16;
+
+  page.drawText(`VPN ${scores.score_vpn}/2`, { x: marginX, y, size: 10.5, font });
+  y -= 14;
+  page.drawText(`Web ${scores.score_web}/3`, { x: marginX, y, size: 10.5, font });
+  y -= 14;
+  page.drawText(`Awareness ${scores.score_awareness}/2`, { x: marginX, y, size: 10.5, font });
+  y -= 22;
+page.drawText("Ihre Antworten", { x: marginX, y, size: 13, font: bold });
   y -= 18;
 
   // Table header
