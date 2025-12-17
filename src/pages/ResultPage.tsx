@@ -65,7 +65,7 @@ export default function ResultPage() {
     if (!leadId) return;
     const toastId = toast.loading(t('pdf.loading'));
     try {
-      const response = await fetch(`/api/leads/${leadId}/pdf`, {
+      const response = await fetch(`/api/result/${leadId}/pdf`, {
         headers: { 'Cache-Control': 'no-cache' },
       });
       if (!response.ok) {
