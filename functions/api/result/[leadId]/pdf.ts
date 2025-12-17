@@ -250,6 +250,8 @@ const printableAnswers = answers.map((a: any) => {
   const marginX = 50;
 
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const bold = font;
+
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
     const M = 48; // margin
