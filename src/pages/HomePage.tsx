@@ -66,14 +66,18 @@ export function HomePage() {
     });
   }, [currentStep, answers]);
   const handleSubmit = async () => {
-    const payload: any = {
+        const formData: any = {
       ...answers,
       consent_contact: answers.consent_contact === '1' ? 1 : 0,
       consent_tracking: answers.consent_tracking === '1' ? 1 : 0,
       discount_opt_in: answers.discount_opt_in === '1' ? 1 : 0,
-      language: useFunnelStore.getState().language,
     };
-
+    const payload: any = {
+      language: useFunnelStore.getState().language,
+      formData,
+      // optional: backward compatible (schadet nicht)
+      ...formData,
+    };
     try {
       const res = await api<any>('/api/submit', {
         method: 'POST',
