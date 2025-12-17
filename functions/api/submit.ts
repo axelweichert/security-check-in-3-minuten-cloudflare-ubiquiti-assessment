@@ -119,14 +119,9 @@ function pickLeadValue(colName: string, body: LeadInput, req: Request, now: stri
 }
 
 function extractFormData(body: LeadInput): LeadInput {
-  // Unterstützt:
-  // 1) { formData: {...} } (alt)
-  // 2) flaches Payload aus dem Frontend (neu)
   const fd = body?.formData;
   if (fd && typeof fd === "object" && !Array.isArray(fd)) return fd as LeadInput;
 
-  // Flach: wir nehmen alles, was nicht eindeutig Lead-Feld ist, als Answer.
-  // (Lead-Felder werden separat in leads persistiert)
   const blacklist = new Set([
     "id",
     "company_name",
@@ -159,13 +154,13 @@ function extractFormData(body: LeadInput): LeadInput {
     "source",
     "created_at",
     "updated_at",
+    "formData",
   ]);
 
   const out: LeadInput = {};
   for (const [k, v] of Object.entries(body ?? {})) {
     if (blacklist.has(k)) continue;
     if (v === undefined) continue;
-    // store primitives/arrays as string
     if (Array.isArray(v)) out[k] = v.join(", ");
     else out[k] = v;
   }
@@ -179,9 +174,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const leadId = crypto.randomUUID();
     const now = new Date().toISOString();
 
-    // 1) leads: dynamisch auf existierende Spalten mappen
+    // leads: dynamisch auf existierende Spalten mappen
     const info = await env.DB.prepare(`PRAGMA table_info(leads);`).all();
-    const cols = ((info as any).results ?? []) as Array<{ name: string; notnull: number; dflt_value: any; type: string }>;
+    const cols = ((info as any).results ?? []) as Array<{ name: string }>;
     if (!cols.length) return json(500, { ok: false, error: "Schema error", message: "PRAGMA table_info(leads) empty" });
 
     const insertCols: string[] = [];
@@ -190,7 +185,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
     for (const c of cols) {
       const v = pickLeadValue(c.name, body, request, now, leadId);
-      if (v === undefined) continue; // DB defaults
+      if (v === undefined) continue;
       insertCols.push(c.name);
       insertVals.push(v);
       placeholders.push("?");
@@ -198,18 +193,17 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
     await env.DB.prepare(`INSERT INTO leads (${insertCols.join(",")}) VALUES (${placeholders.join(",")})`).bind(...insertVals).run();
 
-    // 2) lead_answers: aus formData oder flachem Payload
+    // lead_answers: OHNE created_at (Schema hat die Spalte nicht)
     const formData = extractFormData(body);
 
-    // Optional: existing answers for this lead clean (safety if retried)
     await env.DB.prepare(`DELETE FROM lead_answers WHERE lead_id = ?`).bind(leadId).run();
 
     const entries = Object.entries(formData).filter(([k, v]) => k && v !== undefined && v !== null && `${v}`.length > 0);
     for (const [question_key, rawVal] of entries) {
       const answer_value = Array.isArray(rawVal) ? rawVal.join(", ") : `${rawVal}`;
       await env.DB
-        .prepare(`INSERT INTO lead_answers (lead_id, question_key, answer_value, created_at) VALUES (?, ?, ?, ?)`)
-        .bind(leadId, question_key, answer_value, now)
+        .prepare(`INSERT INTO lead_answers (lead_id, question_key, answer_value) VALUES (?, ?, ?)`)
+        .bind(leadId, question_key, answer_value)
         .run();
     }
 
@@ -219,5 +213,4 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
 };
 
-// Optional: health/info
 export const onRequestGet: PagesFunction<Env> = async () => json(200, { ok: true });

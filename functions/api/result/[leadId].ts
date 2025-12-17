@@ -48,16 +48,17 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     const lead = ((leadRes as any).results?.[0] ?? null) as any;
     if (!lead) return json(404, { ok: false, error: "Not found", message: "Lead not found" });
 
+    // lead_answers hat KEIN created_at -> wir sortieren über rowid
     const ansRes = await env.DB
-      .prepare(`SELECT id, lead_id, question_key, answer_value, created_at FROM lead_answers WHERE lead_id = ? ORDER BY created_at ASC`)
+      .prepare(`SELECT id, lead_id, question_key, answer_value FROM lead_answers WHERE lead_id = ? ORDER BY rowid ASC`)
       .bind(leadId)
       .all();
+
     const answers = (((ansRes as any).results ?? []) as any[]).map((a) => ({
       id: a.id ?? `${a.lead_id}:${a.question_key}`,
       lead_id: a.lead_id,
       question_key: a.question_key,
       answer_value: a.answer_value,
-      created_at: a.created_at,
     }));
 
     const answerMap = new Map<string, string>();
