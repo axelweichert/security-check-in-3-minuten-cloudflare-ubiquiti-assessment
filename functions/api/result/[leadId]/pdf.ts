@@ -233,7 +233,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
 const printable = (answers && answers.length) ? answers : ([{ question_key: "-", answer_value: "Keine Antworten vorhanden" }] as any);
 
 const printableAnswers = answers.map((a: any) => {
-  const { question, answer } = toGermanQA(a.question_label, a.answer_label);
+  const { question, answer } = toGermanQA(a.question_key, a.answer_value);
   return { ...a, question_label: question, answer_label: answer };
 });
 
