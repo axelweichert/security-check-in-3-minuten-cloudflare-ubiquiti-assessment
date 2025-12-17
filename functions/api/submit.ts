@@ -154,20 +154,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         (body && typeof body === "object" && !Array.isArray(body) && (body as any).formData && typeof (body as any).formData === "object")
           ? ((body as any).formData as LeadInput)
           : (body as LeadInput);
-      const formData: LeadInput =
-        (body && ref(body) eq "HASH" && exists body->{formData} && ref(body->{formData}) eq "HASH")
-          ? body->{formData}
-          : body;
 
-      const formData: LeadInput =
-        (body && ref(body) eq "HASH" && exists body->{formData} && ref(body->{formData}) eq "HASH")
-          ? body->{formData}
-          : body;
-
-      const formData: LeadInput =
-        (body && typeof body === "object" && (body as any).formData && typeof (body as any).formData === "object")
-          ? ((body as any).formData as LeadInput)
-          : (body as LeadInput);
     } catch {
       return json(400, { ok: false, error: "Invalid JSON body" });
     }
