@@ -207,7 +207,10 @@ function sanitizeText(v: unknown) {
   return (v ?? "").toString().replace(/\s+/g, " ").trim();
 }
 
-export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
+export const onRequestGet: PagesFunction<Env> = async ({
+  // PDF_DEBUG_WRAP
+  try {
+ params, env }) => {
   const leadId = (params as any)?.leadId as string | undefined;
   if (!leadId) return new Response("Missing leadId", { status: 400 });
 
@@ -444,4 +447,14 @@ const printableAnswers = answers.map((a: any) => {
       headers: { "content-type": "application/json; charset=utf-8" },
     });
   }
+  } catch (e: any) {
+    console.error("PDF generation failed:", e);
+    const msg = e?.message ? String(e.message) : String(e);
+    const stack = e?.stack ? String(e.stack) : "";
+    return new Response(JSON.stringify({ ok: false, error: "PDF generation failed", message: msg, stack }), {
+      status: 500,
+      headers: { "content-type": "application/json; charset=utf-8" },
+    });
+  }
+
 };
