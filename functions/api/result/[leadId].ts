@@ -16,27 +16,30 @@ function isMeaningful(v: string | null | undefined) {
   return true;
 }
 
-function computeScores(answerMap: Map<string, string>) {
-  const score_vpn = Math.min(
-    2,
-    ANSWER_GROUPS.vpn.reduce((acc, k) => acc + (isMeaningful(answerMap.get(k)) ? 1 : 0), 0)
-  );
-  const score_web = Math.min(
-    3,
-    ANSWER_GROUPS.web.reduce((acc, k) => acc + (isMeaningful(answerMap.get(k)) ? 1 : 0), 0)
-  );
-  const score_awareness = Math.min(
-    2,
-    ANSWER_GROUPS.awareness.reduce((acc, k) => acc + (isMeaningful(answerMap.get(k)) ? 1 : 0), 0)
-  );
+function computeFallbackScores(answerMap: Map<string, string>) {
+  const score_vpn = Math.min(2, ANSWER_GROUPS.vpn.reduce((acc, k) => acc + (isMeaningful(answerMap.get(k)) ? 1 : 0), 0));
+  const score_web = Math.min(3, ANSWER_GROUPS.web.reduce((acc, k) => acc + (isMeaningful(answerMap.get(k)) ? 1 : 0), 0));
+  const score_awareness = Math.min(2, ANSWER_GROUPS.awareness.reduce((acc, k) => acc + (isMeaningful(answerMap.get(k)) ? 1 : 0), 0));
 
   const maxTotal = 2 + 3 + 2;
   const totalPoints = score_vpn + score_web + score_awareness;
   const score_total = Math.round((totalPoints / maxTotal) * 100);
 
   const risk_level = score_total >= 75 ? "low" : score_total >= 40 ? "medium" : "high";
-
   return { score_total, score_vpn, score_web, score_awareness, risk_level };
+}
+
+function safeParseJson<T = any>(s: unknown): T | null {
+  try {
+    if (typeof s !== "string") return null;
+    return JSON.parse(s) as T;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeRiskFromPercent(pct: number) {
+  return pct >= 75 ? "low" : pct >= 40 ? "medium" : "high";
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
@@ -48,7 +51,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     const lead = ((leadRes as any).results?.[0] ?? null) as any;
     if (!lead) return json(404, { ok: false, error: "Not found", message: "Lead not found" });
 
-    // lead_answers hat KEIN created_at -> wir sortieren über rowid
+    // answers
     const ansRes = await env.DB
       .prepare(`SELECT id, lead_id, question_key, answer_value FROM lead_answers WHERE lead_id = ? ORDER BY rowid ASC`)
       .bind(leadId)
@@ -64,7 +67,43 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     const answerMap = new Map<string, string>();
     for (const a of answers) answerMap.set(a.question_key, a.answer_value);
 
-    const scores = computeScores(answerMap);
+    const fallback = computeFallbackScores(answerMap);
+
+    // Prefer persisted lead_scores if table exists + row exists
+    let scores = fallback;
+    try {
+      const scoreRes = await env.DB
+        .prepare(`SELECT * FROM lead_scores WHERE lead_id = ? ORDER BY rowid DESC LIMIT 1`)
+        .bind(leadId)
+        .all();
+
+      const row = ((scoreRes as any).results?.[0] ?? null) as any;
+      if (row) {
+        // common schema variants we’ve seen in this repo:
+        // percent | score_total | total
+        const pctRaw = row.percent ?? row.score_total ?? row.total ?? row.score ?? null;
+        const pct = typeof pctRaw === "number" ? pctRaw : Number(pctRaw);
+
+        // breakdown_json may contain per-area scores; support multiple key shapes
+        const breakdown = safeParseJson<any>(row.breakdown_json ?? row.breakdown ?? null) ?? {};
+        const vpn = Number(breakdown.score_vpn ?? breakdown.vpn ?? breakdown.vpn_score ?? fallback.score_vpn);
+        const web = Number(breakdown.score_web ?? breakdown.web ?? breakdown.web_score ?? fallback.score_web);
+        const awareness = Number(breakdown.score_awareness ?? breakdown.awareness ?? breakdown.awareness_score ?? fallback.score_awareness);
+
+        if (Number.isFinite(pct)) {
+          const risk = (row.rating ?? row.risk_level) ? String(row.rating ?? row.risk_level) : normalizeRiskFromPercent(pct);
+          scores = {
+            score_total: Math.max(0, Math.min(100, Math.round(pct))),
+            score_vpn: Number.isFinite(vpn) ? vpn : fallback.score_vpn,
+            score_web: Number.isFinite(web) ? web : fallback.score_web,
+            score_awareness: Number.isFinite(awareness) ? awareness : fallback.score_awareness,
+            risk_level: (risk === "low" || risk === "medium" || risk === "high") ? risk : normalizeRiskFromPercent(pct),
+          };
+        }
+      }
+    } catch {
+      // ignore: no lead_scores table or query failed; keep fallback
+    }
 
     return json(200, { ok: true, item: { lead, answers, scores } });
   } catch (e: any) {
