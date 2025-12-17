@@ -1,48 +1,120 @@
 type Env = { DB: D1Database };
 
 const json = (status: number, data: unknown) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { "content-type": "application/json; charset=utf-8" },
-  });
+  new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8" } });
 
-const ANSWER_GROUPS = {
-  vpn: ["vpn_in_use", "vpn_solution", "vpn_users", "vpn_technology", "remote_access_satisfaction"],
-  web: ["critical_processes_on_website", "hosting_type", "web_protection", "security_incidents"],
-  awareness: ["awareness_training", "infrastructure_resilience", "financial_damage_risk"],
-} as const;
-
-function isMeaningful(v: string | null | undefined) {
-  const s = (v ?? "").toString().trim().toLowerCase();
-  if (!s) return false;
-  if (["unknown", "dont_know", "n/a", "na", "none"].includes(s)) return false;
-  return true;
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
 }
 
-function computeFallbackScores(answerMap: Map<string, string>) {
-  const score_vpn = Math.min(2, ANSWER_GROUPS.vpn.reduce((acc, k) => acc + (isMeaningful(answerMap.get(k)) ? 1 : 0), 0));
-  const score_web = Math.min(3, ANSWER_GROUPS.web.reduce((acc, k) => acc + (isMeaningful(answerMap.get(k)) ? 1 : 0), 0));
-  const score_awareness = Math.min(2, ANSWER_GROUPS.awareness.reduce((acc, k) => acc + (isMeaningful(answerMap.get(k)) ? 1 : 0), 0));
-
-  const maxTotal = 2 + 3 + 2;
-  const totalPoints = score_vpn + score_web + score_awareness;
-  const score_total = Math.round((totalPoints / maxTotal) * 100);
-  const risk_level = normalizeRiskFromPercent(score_total);
-
-  return { score_total, score_vpn, score_web, score_awareness, risk_level };
-}
-
-function safeParseJson<T = any>(s: unknown): T | null {
-  try {
-    if (typeof s !== "string") return null;
-    return JSON.parse(s) as T;
-  } catch {
-    return null;
-  }
+function n(v: unknown, fallback = 0) {
+  const x = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(x) ? x : fallback;
 }
 
 function normalizeRiskFromPercent(pct: number) {
   return pct >= 75 ? "low" : pct >= 40 ? "medium" : "high";
+}
+
+/**
+ * Wert-basierte Scoring-Logik (nicht nur "answered/not-empty").
+ * Ziel: "none/unsatisfied/no" muss Punkte kosten.
+ * Skalen:
+ *  - VPN: 0..2
+ *  - Web: 0..3
+ *  - Awareness: 0..2
+ *  - Total: Prozent aus 7 Punkten
+ */
+function computeScores(answerMap: Map<string, string>) {
+  const get = (k: string) => (answerMap.get(k) ?? "").toString();
+
+  // --- VPN (0..2)
+  let vpn = 0;
+
+  // vpn_in_use
+  const vpnInUse = get("vpn_in_use");
+  if (vpnInUse === "yes") vpn += 0.5;
+
+  // vpn_technology
+  const vpnTech = get("vpn_technology");
+  if (vpnTech === "wireguard" || vpnTech === "ipsec") vpn += 0.75;
+  else if (vpnTech === "sslvpn") vpn += 0.35;
+  else if (vpnTech === "pptp") vpn += 0.0;
+
+  // vpn_solution
+  const vpnSol = get("vpn_solution");
+  if (vpnSol === "zero_trust" || vpnSol === "ztna") vpn += 0.75;
+  else if (vpnSol === "firewall_vpn" || vpnSol === "vpn_gateway") vpn += 0.45;
+
+  // remote_access_satisfaction
+  const sat = get("remote_access_satisfaction");
+  if (sat === "satisfied") vpn += 0.25;
+  else if (sat === "neutral") vpn += 0.1;
+  else if (sat === "unsatisfied") vpn += 0.0;
+
+  // vpn_users (mehr Nutzer = mehr Angriffsfläche; keine volle Punktzahl nur dafür)
+  const users = get("vpn_users");
+  if (users === "less_than_10") vpn += 0.15;
+  else if (users === "10_49") vpn += 0.1;
+  else if (users) vpn += 0.05;
+
+  const score_vpn = clamp(Math.round(vpn * 100) / 100, 0, 2);
+
+  // --- WEB (0..3)
+  let web = 0;
+
+  const critical = get("critical_processes_on_website"); // yes/no
+  const hosting = get("hosting_type");
+  const protection = get("web_protection");
+  const incidents = get("security_incidents"); // yes/no
+
+  // hosting baseline
+  if (hosting === "managed_hosting") web += 0.5;
+  else if (hosting === "cloud" || hosting === "saas") web += 0.7;
+  else if (hosting) web += 0.25;
+
+  // protection is the biggest lever
+  if (protection === "none") web += 0.0;
+  else if (protection === "basic") web += 0.75;
+  else if (protection === "waf") web += 1.6;
+  else if (protection === "waf_ddos" || protection === "waf+ddos") web += 2.2;
+  else if (protection) web += 1.0;
+
+  // if critical=yes but protection=none -> harte Korrektur
+  if (critical === "yes" && protection === "none") web -= 0.8;
+
+  // incidents penalty
+  if (incidents === "yes") web -= 0.7;
+
+  const score_web = clamp(Math.round(web * 100) / 100, 0, 3);
+
+  // --- AWARENESS (0..2)
+  let aw = 0;
+
+  const training = get("awareness_training"); // yes/partially/no
+  const resil = get("infrastructure_resilience"); // high/medium/low
+  const dmg = get("financial_damage_risk"); // buckets
+
+  if (training === "yes") aw += 0.9;
+  else if (training === "partially") aw += 0.45;
+
+  if (resil === "high") aw += 0.7;
+  else if (resil === "medium") aw += 0.35;
+
+  // damage risk: je höher, desto mehr Risiko -> weniger Punkte
+  if (dmg === "less_than_5k") aw += 0.4;
+  else if (dmg === "5k_to_25k") aw += 0.2;
+  else if (dmg) aw += 0.0;
+
+  const score_awareness = clamp(Math.round(aw * 100) / 100, 0, 2);
+
+  const maxTotal = 2 + 3 + 2; // 7
+  const totalPoints = score_vpn + score_web + score_awareness;
+  const score_total = clamp(Math.round((totalPoints / maxTotal) * 100), 0, 100);
+
+  const risk_level = normalizeRiskFromPercent(score_total);
+
+  return { score_total, score_vpn, score_web, score_awareness, risk_level };
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
@@ -54,7 +126,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     const lead = ((leadRes as any).results?.[0] ?? null) as any;
     if (!lead) return json(404, { ok: false, error: "Not found", message: "Lead not found" });
 
-    // answers
     const ansRes = await env.DB
       .prepare(`SELECT id, lead_id, question_key, answer_value FROM lead_answers WHERE lead_id = ? ORDER BY rowid ASC`)
       .bind(leadId)
@@ -70,42 +141,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     const answerMap = new Map<string, string>();
     for (const a of answers) answerMap.set(a.question_key, a.answer_value);
 
-    const fallback = computeFallbackScores(answerMap);
-
-    // Prefer persisted lead_scores if present
-    let scores = fallback;
-    try {
-      const scoreRes = await env.DB
-        .prepare(`SELECT * FROM lead_scores WHERE lead_id = ? ORDER BY rowid DESC LIMIT 1`)
-        .bind(leadId)
-        .all();
-
-      const row = ((scoreRes as any).results?.[0] ?? null) as any;
-      if (row) {
-        const pctRaw = row.percent ?? row.score_total ?? row.total ?? row.score ?? null;
-        const pct = typeof pctRaw === "number" ? pctRaw : Number(pctRaw);
-
-        const breakdown = safeParseJson<any>(row.breakdown_json ?? row.breakdown ?? null) ?? {};
-        const vpn = Number(breakdown.score_vpn ?? breakdown.vpn ?? breakdown.vpn_score ?? fallback.score_vpn);
-        const web = Number(breakdown.score_web ?? breakdown.web ?? breakdown.web_score ?? fallback.score_web);
-        const awareness = Number(breakdown.score_awareness ?? breakdown.awareness ?? breakdown.awareness_score ?? fallback.score_awareness);
-
-        if (Number.isFinite(pct)) {
-          const riskRaw = row.rating ?? row.risk_level;
-          const risk = riskRaw ? String(riskRaw) : normalizeRiskFromPercent(pct);
-
-          scores = {
-            score_total: Math.max(0, Math.min(100, Math.round(pct))),
-            score_vpn: Number.isFinite(vpn) ? vpn : fallback.score_vpn,
-            score_web: Number.isFinite(web) ? web : fallback.score_web,
-            score_awareness: Number.isFinite(awareness) ? awareness : fallback.score_awareness,
-            risk_level: (risk === "low" || risk === "medium" || risk === "high") ? risk : normalizeRiskFromPercent(pct),
-          };
-        }
-      }
-    } catch {
-      // keep fallback if lead_scores doesn't exist or query fails
-    }
+    const scores = computeScores(answerMap);
 
     return json(200, { ok: true, item: { lead, answers, scores } });
   } catch (e: any) {
