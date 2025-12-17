@@ -73,14 +73,12 @@ export function HomePage() {
       discount_opt_in: answers.discount_opt_in === '1' ? 1 : 0,
     };
     const payload: any = {
-      // Lead-Felder (für leads-Tabelle)
       ...answers,
       consent_contact: answers.consent_contact === '1' ? 1 : 0,
       consent_tracking: answers.consent_tracking === '1' ? 1 : 0,
       discount_opt_in: answers.discount_opt_in === '1' ? 1 : 0,
       language: useFunnelStore.getState().language,
-
-      // Answers (für lead_answers-Tabelle)
+      // IMPORTANT: submit.ts schreibt Answers aus body.formData nach lead_answers
       formData: {
         ...answers,
         consent_contact: answers.consent_contact === '1' ? 1 : 0,
