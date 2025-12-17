@@ -1,87 +1,72 @@
-import type { PagesFunction } from '@cloudflare/workers-types';
+type Env = { DB: D1Database };
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'content-type': 'application/json; charset=utf-8' },
-  });
+const json = (status: number, data: unknown) =>
+  new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8" } });
+
+const ANSWER_GROUPS = {
+  vpn: ["vpn_in_use", "vpn_solution", "vpn_users", "vpn_technology", "remote_access_satisfaction"],
+  web: ["critical_processes_on_website", "hosting_type", "web_protection", "security_incidents"],
+  awareness: ["awareness_training", "infrastructure_resilience", "financial_damage_risk"],
+} as const;
+
+function isMeaningful(v: string | null | undefined) {
+  const s = (v ?? "").toString().trim().toLowerCase();
+  if (!s) return false;
+  if (["unknown", "dont_know", "n/a", "na", "none"].includes(s)) return false;
+  return true;
 }
 
-type RiskLevel = 'low' | 'medium' | 'high';
+function computeScores(answerMap: Map<string, string>) {
+  const score_vpn = Math.min(
+    2,
+    ANSWER_GROUPS.vpn.reduce((acc, k) => acc + (isMeaningful(answerMap.get(k)) ? 1 : 0), 0)
+  );
+  const score_web = Math.min(
+    3,
+    ANSWER_GROUPS.web.reduce((acc, k) => acc + (isMeaningful(answerMap.get(k)) ? 1 : 0), 0)
+  );
+  const score_awareness = Math.min(
+    2,
+    ANSWER_GROUPS.awareness.reduce((acc, k) => acc + (isMeaningful(answerMap.get(k)) ? 1 : 0), 0)
+  );
 
-function calcScores(answerMap: Map<string, string>) {
-  let score_vpn = 0;
-  let score_web = 0;
-  let score_awareness = 0;
+  const maxTotal = 2 + 3 + 2;
+  const totalPoints = score_vpn + score_web + score_awareness;
+  const score_total = Math.round((totalPoints / maxTotal) * 100);
 
-  // VPN (max 2)
-  if (answerMap.get('vpn_in_use') === 'yes') score_vpn++;
-  if (answerMap.get('remote_access_satisfaction') === 'good') score_vpn++;
+  const risk_level = score_total >= 75 ? "low" : score_total >= 40 ? "medium" : "high";
 
-  // WEB (max 3)
-  if (answerMap.get('critical_processes_on_website') === 'no') score_web++;
-  if (answerMap.get('web_protection') && answerMap.get('web_protection') !== 'none') score_web++;
-  if (answerMap.get('security_incidents') === 'no') score_web++;
-
-  // Awareness (max 2)
-  if (answerMap.get('awareness_training') === 'yes') score_awareness++;
-  if (answerMap.get('infrastructure_resilience') === 'high') score_awareness++;
-
-  const totalRaw = score_vpn + score_web + score_awareness;
-  const score_total = Math.round((totalRaw / 7) * 100);
-
-  let risk_level: RiskLevel = 'high';
-  if (score_total >= 75) risk_level = 'low';
-  else if (score_total >= 40) risk_level = 'medium';
-
-  return {
-    score_total,
-    score_vpn,
-    score_web,
-    score_awareness,
-    risk_level,
-  };
+  return { score_total, score_vpn, score_web, score_awareness, risk_level };
 }
 
-export const onRequestGet: PagesFunction = async (ctx) => {
+export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
+  const leadId = (params as any)?.leadId as string | undefined;
+  if (!leadId) return json(400, { ok: false, error: "Missing leadId" });
+
   try {
-    const leadId = ctx.params.leadId as string;
-    const db = ctx.env.DB as D1Database;
+    const leadRes = await env.DB.prepare(`SELECT * FROM leads WHERE id = ? LIMIT 1`).bind(leadId).all();
+    const lead = ((leadRes as any).results?.[0] ?? null) as any;
+    if (!lead) return json(404, { ok: false, error: "Not found", message: "Lead not found" });
 
-    const lead = await db
-      .prepare(`SELECT * FROM leads WHERE id = ?`)
-      .bind(leadId)
-      .first();
-
-    if (!lead) {
-      return json({ ok: false, error: 'Lead not found' }, 404);
-    }
-
-    const answersRes = await db
-      .prepare(`SELECT question_key, answer_value FROM lead_answers WHERE lead_id = ?`)
+    const ansRes = await env.DB
+      .prepare(`SELECT id, lead_id, question_key, answer_value, created_at FROM lead_answers WHERE lead_id = ? ORDER BY created_at ASC`)
       .bind(leadId)
       .all();
+    const answers = (((ansRes as any).results ?? []) as any[]).map((a) => ({
+      id: a.id ?? `${a.lead_id}:${a.question_key}`,
+      lead_id: a.lead_id,
+      question_key: a.question_key,
+      answer_value: a.answer_value,
+      created_at: a.created_at,
+    }));
 
-    const answers = answersRes.results ?? [];
-    const map = new Map<string, string>();
-    for (const a of answers) {
-      map.set(a.question_key, a.answer_value);
-    }
+    const answerMap = new Map<string, string>();
+    for (const a of answers) answerMap.set(a.question_key, a.answer_value);
 
-    const scores = calcScores(map);
+    const scores = computeScores(answerMap);
 
-    return json({
-      ok: true,
-      item: {
-        lead,
-        answers,
-        scores,
-      },
-    });
-  } catch (err) {
-    return json(
-      { ok: false, error: 'Result fetch failed', message: String(err) },
-      500
-    );
+    return json(200, { ok: true, item: { lead, answers, scores } });
+  } catch (e: any) {
+    return json(500, { ok: false, error: "Result fetch failed", message: e?.message ?? String(e) });
   }
 };

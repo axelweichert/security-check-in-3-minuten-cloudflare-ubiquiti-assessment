@@ -1,5 +1,9 @@
 type LeadInput = Record<string, any>;
 
+type Env = {
+  DB: D1Database;
+};
+
 const json = (status: number, data: unknown) =>
   new Response(JSON.stringify(data), {
     status,
@@ -18,17 +22,6 @@ const detectLang = (body: LeadInput, req: Request) => {
   return "de";
 };
 
-const inferFallbackByType = (declType: string | null | undefined) => {
-  const t = (declType ?? "").toUpperCase();
-
-  // SQLite type affinity (rough)
-  if (t.includes("INT") || t.includes("BOOL")) return 0;
-  if (t.includes("REAL") || t.includes("FLOA") || t.includes("DOUB") || t.includes("NUM")) return 0;
-  if (t.includes("BLOB")) return new Uint8Array(); // very rare; avoids null for NOT NULL blobs
-  // default: TEXT-ish
-  return "unknown";
-};
-
 const normalizePhone = (v: any) => {
   const s = (v ?? "").toString().trim();
   return s.length > 0 ? s : "n/a";
@@ -44,24 +37,12 @@ const normalizeVendor = (v: any) => {
   return s.length > 0 ? s : "unknown";
 };
 
-async function getLeadsTableInfo(env: Env) {
-  // D1 returns rows under .results
-  const res = await env.DB.prepare(`PRAGMA table_info(leads);`).all();
-  const rows = (res as any).results as Array<{
-    cid: number;
-    name: string;
-    type: string;
-    notnull: number;
-    dflt_value: any;
-    pk: number;
-  }>;
-
-  if (!rows || rows.length === 0) throw new Error("Schema error: PRAGMA table_info(leads) returned no rows");
-  return rows;
+function asInt01(v: any): 0 | 1 {
+  if (v === 1 || v === "1" || v === true || v === "true") return 1;
+  return 0;
 }
 
-function pickValueForColumn(colName: string, body: LeadInput, req: Request, now: string, leadId: string) {
-  // Common canonical mapping (extendable)
+function pickLeadValue(colName: string, body: LeadInput, req: Request, now: string, leadId: string) {
   switch (colName) {
     case "id":
       return leadId;
@@ -105,14 +86,14 @@ function pickValueForColumn(colName: string, body: LeadInput, req: Request, now:
       return normalizeVendor(body.zero_trust_vendor ?? body.zero_trust);
 
     case "consent_contact":
-      return body.consent_contact ? 1 : 0;
+      return asInt01(body.consent_contact);
 
     case "consent_tracking":
-      return body.consent_tracking ? 1 : 0;
+      return asInt01(body.consent_tracking);
 
     case "discount_opt_in":
     case "discount":
-      return body.discount_opt_in ? 1 : 0;
+      return asInt01(body.discount_opt_in);
 
     case "language":
     case "lang":
@@ -133,153 +114,110 @@ function pickValueForColumn(colName: string, body: LeadInput, req: Request, now:
       return (body.source ?? "security-check").toString();
 
     default:
-      // If payload contains a matching key, use it
-      if (Object.prototype.hasOwnProperty.call(body, colName)) return body[colName];
       return undefined;
   }
 }
 
-export const onRequestGet: PagesFunction<Env> = async () => {
-  return json(405, { ok: false, error: "Method Not Allowed. Use POST /api/submit" });
-};
+function extractFormData(body: LeadInput): LeadInput {
+  // Unterstützt:
+  // 1) { formData: {...} } (alt)
+  // 2) flaches Payload aus dem Frontend (neu)
+  const fd = body?.formData;
+  if (fd && typeof fd === "object" && !Array.isArray(fd)) return fd as LeadInput;
+
+  // Flach: wir nehmen alles, was nicht eindeutig Lead-Feld ist, als Answer.
+  // (Lead-Felder werden separat in leads persistiert)
+  const blacklist = new Set([
+    "id",
+    "company_name",
+    "company",
+    "firma",
+    "contact_name",
+    "contact",
+    "ansprechpartner",
+    "email",
+    "email_address",
+    "phone",
+    "telefon",
+    "employee_range",
+    "employees",
+    "mitarbeiteranzahl",
+    "firewall_vendor",
+    "firewall",
+    "vpn_technology",
+    "vpn_tech",
+    "vpn_solution",
+    "zero_trust_vendor",
+    "zero_trust",
+    "consent_contact",
+    "consent_tracking",
+    "discount_opt_in",
+    "discount",
+    "language",
+    "lang",
+    "status",
+    "source",
+    "created_at",
+    "updated_at",
+  ]);
+
+  const out: LeadInput = {};
+  for (const [k, v] of Object.entries(body ?? {})) {
+    if (blacklist.has(k)) continue;
+    if (v === undefined) continue;
+    // store primitives/arrays as string
+    if (Array.isArray(v)) out[k] = v.join(", ");
+    else out[k] = v;
+  }
+  return out;
+}
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   try {
-    if (!env.DB) return json(500, { ok: false, error: "DB binding missing (expected env.DB)" });
+    const body = (await request.json()) as LeadInput;
 
-    let body: LeadInput;
-    try {
-      body = (await request.json()) as LeadInput;
-      const formData: LeadInput =
-        (body && typeof body === "object" && !Array.isArray(body) && (body as any).formData && typeof (body as any).formData === "object")
-          ? ((body as any).formData as LeadInput)
-          : (body as LeadInput);
-
-    } catch {
-      return json(400, { ok: false, error: "Invalid JSON body" });
-    }
-
-    const now = new Date().toISOString();
     const leadId = crypto.randomUUID();
+    const now = new Date().toISOString();
 
-    // Read schema and build a safe INSERT dynamically
-    const cols = await getLeadsTableInfo(env);
+    // 1) leads: dynamisch auf existierende Spalten mappen
+    const info = await env.DB.prepare(`PRAGMA table_info(leads);`).all();
+    const cols = ((info as any).results ?? []) as Array<{ name: string; notnull: number; dflt_value: any; type: string }>;
+    if (!cols.length) return json(500, { ok: false, error: "Schema error", message: "PRAGMA table_info(leads) empty" });
 
-    const colNames: string[] = [];
+    const insertCols: string[] = [];
+    const insertVals: any[] = [];
     const placeholders: string[] = [];
-    const values: any[] = [];
 
     for (const c of cols) {
-      const name = c.name;
-
-      // Strategy:
-      // - If column has DB default, omit it unless we have an explicit value.
-      // - If NOT NULL without default, we MUST provide something.
-      // - If nullable, provide value if we have it; else omit (keeps NULL / default behavior).
-      const hasDefault = c.dflt_value !== null && c.dflt_value !== undefined;
-      const isNotNull = !!c.notnull;
-
-      const picked = pickValueForColumn(name, body, request, now, leadId);
-      const hasPicked =
-        picked !== undefined &&
-        picked !== null &&
-        !(typeof picked === "string" && picked.trim().length === 0);
-
-      if (hasPicked) {
-        colNames.push(name);
-        placeholders.push("?");
-        values.push(picked);
-        continue;
-      }
-
-      if (hasDefault) {
-        // Let DB default handle it
-        continue;
-      }
-
-      if (isNotNull) {
-        // Must provide fallback
-        let fallback: any;
-
-        // Special cases: keep your lead minimum viable data clean
-        if (name === "phone") fallback = normalizePhone(body.phone);
-        else if (name === "employee_range") fallback = normalizeEmployeeRange(body.employee_range);
-        else if (name === "firewall_vendor") fallback = normalizeVendor(body.firewall_vendor);
-        else if (name === "vpn_technology") fallback = normalizeVendor(body.vpn_technology);
-        else if (name === "language") fallback = detectLang(body, request);
-        else if (name === "created_at" || name === "updated_at") fallback = now;
-        else if (name === "status") fallback = "new";
-        else if (name === "id") fallback = leadId;
-        else fallback = inferFallbackByType(c.type);
-
-        colNames.push(name);
-        placeholders.push("?");
-        values.push(fallback);
-      }
-      // else: nullable without default and no value => omit
-    }
-
-    // Minimal sanity: ensure we have an ID column if it exists in schema and was not added
-    if (cols.some((x) => x.name === "id") && !colNames.includes("id")) {
-      colNames.push("id");
+      const v = pickLeadValue(c.name, body, request, now, leadId);
+      if (v === undefined) continue; // DB defaults
+      insertCols.push(c.name);
+      insertVals.push(v);
       placeholders.push("?");
-      values.push(leadId);
     }
 
-    const sql = `INSERT INTO leads (${colNames.join(", ")}) VALUES (${placeholders.join(", ")});`;
-    await env.DB.prepare(sql).bind(...values).run();
+    await env.DB.prepare(`INSERT INTO leads (${insertCols.join(",")}) VALUES (${placeholders.join(",")})`).bind(...insertVals).run();
 
-    // Optional: write answers if table exists (failsafe)
-    if (body.answers && typeof body.answers === "object") {
-      try {
-        for (const [question, answer] of Object.entries(body.answers)) {
-          await env.DB.prepare(
-            `INSERT INTO lead_answers (lead_id, question_key, answer_value, created_at)
-             VALUES (?, ?, ?, ?)`
-          )
-            .bind(
-              leadId,
-              question,
-              typeof answer === "string" ? answer : JSON.stringify(answer),
-              now
-            )
-            .run();
-        }
-      } catch (e) {
-        // Do not fail lead creation if answers table differs
-        console.error("lead_answers insert warning:", e);
-      }
-    }
+    // 2) lead_answers: aus formData oder flachem Payload
+    const formData = extractFormData(body);
 
-    // Optional: write score if table exists (failsafe)
-    if (body.score) {
-      try {
-        await env.DB.prepare(
-          `INSERT INTO lead_scores (lead_id, total, percent, rating, breakdown_json, created_at)
-           VALUES (?, ?, ?, ?, ?, ?)`
-        )
-          .bind(
-            leadId,
-            Number(body.score.total ?? 0),
-            Number(body.score.percent ?? 0),
-            (body.score.rating ?? "medium").toString(),
-            JSON.stringify(body.score.breakdown ?? {}),
-            now
-          )
-          .run();
-      } catch (e) {
-        console.error("lead_scores insert warning:", e);
-      }
+    // Optional: existing answers for this lead clean (safety if retried)
+    await env.DB.prepare(`DELETE FROM lead_answers WHERE lead_id = ?`).bind(leadId).run();
+
+    const entries = Object.entries(formData).filter(([k, v]) => k && v !== undefined && v !== null && `${v}`.length > 0);
+    for (const [question_key, rawVal] of entries) {
+      const answer_value = Array.isArray(rawVal) ? rawVal.join(", ") : `${rawVal}`;
+      await env.DB
+        .prepare(`INSERT INTO lead_answers (lead_id, question_key, answer_value, created_at) VALUES (?, ?, ?, ?)`)
+        .bind(leadId, question_key, answer_value, now)
+        .run();
     }
 
     return json(200, { ok: true, lead_id: leadId });
-  } catch (err: any) {
-    console.error("submit error:", err);
-    return json(500, {
-      ok: false,
-      error: "Submit failed",
-      message: String(err?.message ?? err),
-      name: err?.name,
-    });
+  } catch (e: any) {
+    return json(500, { ok: false, error: "Submit failed", message: e?.message ?? String(e) });
   }
 };
+
+// Optional: health/info
+export const onRequestGet: PagesFunction<Env> = async () => json(200, { ok: true });

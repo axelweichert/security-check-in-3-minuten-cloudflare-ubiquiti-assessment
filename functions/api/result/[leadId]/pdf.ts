@@ -1,82 +1,90 @@
 type Env = { DB: D1Database };
 
-const json = (status: number, data: unknown) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { "content-type": "application/json; charset=utf-8" },
-  });
-
-// Minimal valides 1-Seiten-PDF (Text)
-function makeSimplePdf(lines: string[]) {
-  const esc = (t: string) => t.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
-  let y = 780;
-  const stream = lines.slice(0, 35).map(l => {
-    const s = `BT /F1 12 Tf 50 ${y} Td (${esc(l)}) Tj ET`;
-    y -= 18;
-    return s;
-  }).join("\n") + "\n";
-
-  const parts: string[] = [];
-  const obj: string[] = [];
-
-  parts.push("%PDF-1.4\n");
-  obj.push("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
-  obj.push("2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
-  obj.push("3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n");
-  obj.push(`4 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}endstream\nendobj\n`);
-  obj.push("5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n");
-
-  const offsets: number[] = [0];
-  for (const o of obj) {
-    offsets.push(parts.join("").length);
-    parts.push(o);
-  }
-
-  const xrefStart = parts.join("").length;
-  let xref = `xref\n0 ${obj.length + 1}\n`;
-  xref += "0000000000 65535 f \n";
-  for (let i = 1; i <= obj.length; i++) {
-    xref += String(offsets[i]).padStart(10, "0") + " 00000 n \n";
-  }
-
-  const trailer =
-    `trailer\n<< /Size ${obj.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
-
-  return new TextEncoder().encode(parts.join("") + xref + trailer);
+function pdfEscape(s: string) {
+  return s.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 }
 
-export const onRequestGet: PagesFunction<Env> = async ({ env, params }) => {
-  try {
-    const leadId = (params as any).leadId as string;
-    if (!leadId) return json(400, { ok: false, error: "Missing leadId" });
+// Minimal-PDF (1 Seite, Text) – robust genug für Reader/Download
+function makeSimplePdf(lines: string[]) {
+  const contentLines = lines.map((l, i) => `72 ${760 - i * 18} Td (${pdfEscape(l)}) Tj T*`).join("\n");
+  const stream = `BT\n/F1 12 Tf\n${contentLines}\nET`;
 
-    const lead = await env.DB.prepare(
-      `SELECT id, company_name, contact_name, email, created_at FROM leads WHERE id = ? LIMIT 1`
-    ).bind(leadId).first();
+  // PDF objects
+  const objs: string[] = [];
+  objs.push(`1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj`);
+  objs.push(`2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj`);
+  objs.push(`3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj`);
+  objs.push(`4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj`);
+  objs.push(`5 0 obj << /Length ${stream.length} >> stream\n${stream}\nendstream endobj`);
 
-    if (!lead) return json(404, { ok: false, error: "Lead not found" });
+  let offset = 0;
+  const header = `%PDF-1.4\n`;
+  offset += header.length;
 
-    const lines = [
-      "Security-Check Ergebnis",
-      "",
-      `Lead ID: ${leadId}`,
-      `Firma: ${(lead as any).company_name ?? ""}`,
-      `Kontakt: ${(lead as any).contact_name ?? ""}`,
-      `E-Mail: ${(lead as any).email ?? ""}`,
-      `Erstellt: ${(lead as any).created_at ?? ""}`,
-      "",
-      "PDF Endpoint OK (Minimal-PDF).",
-    ];
-
-    const pdf = makeSimplePdf(lines);
-    return new Response(pdf, {
-      headers: {
-        "content-type": "application/pdf",
-        "content-disposition": `attachment; filename="Security-Check_${leadId}.pdf"`,
-        "cache-control": "no-store",
-      },
-    });
-  } catch (e: any) {
-    return json(500, { ok: false, error: "PDF generation failed", message: String(e?.message ?? e) });
+  const xref: number[] = [0];
+  const bodyParts: string[] = [];
+  for (const obj of objs) {
+    xref.push(offset);
+    bodyParts.push(obj + "\n");
+    offset += (obj.length + 1);
   }
+
+  const xrefStart = offset;
+  let xrefTable = `xref\n0 ${xref.length}\n0000000000 65535 f \n`;
+  for (let i = 1; i < xref.length; i++) {
+    xrefTable += `${String(xref[i]).padStart(10, "0")} 00000 n \n`;
+  }
+
+  const trailer = `trailer << /Size ${xref.length} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
+  const pdf = header + bodyParts.join("") + xrefTable + trailer;
+  return new TextEncoder().encode(pdf);
+}
+
+export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
+  const leadId = (params as any)?.leadId as string | undefined;
+  if (!leadId) return new Response("Missing leadId", { status: 400 });
+
+  const leadRes = await env.DB.prepare(`SELECT company_name, language FROM leads WHERE id = ? LIMIT 1`).bind(leadId).all();
+  const lead = ((leadRes as any).results?.[0] ?? null) as any;
+  if (!lead) return new Response("Not found", { status: 404 });
+
+  const resultRes = await env.DB.prepare(`SELECT question_key, answer_value FROM lead_answers WHERE lead_id = ?`).bind(leadId).all();
+  const answers = ((resultRes as any).results ?? []) as Array<{ question_key: string; answer_value: string }>;
+  const answerMap = new Map(answers.map((a) => [a.question_key, a.answer_value]));
+
+  // gleiche Score-Logik wie API
+  const isMeaningful = (v?: string) => {
+    const s = (v ?? "").trim().toLowerCase();
+    if (!s) return false;
+    if (["unknown", "dont_know", "n/a", "na", "none"].includes(s)) return false;
+    return true;
+  };
+  const groups = {
+    vpn: ["vpn_in_use", "vpn_solution", "vpn_users", "vpn_technology", "remote_access_satisfaction"],
+    web: ["critical_processes_on_website", "hosting_type", "web_protection", "security_incidents"],
+    awareness: ["awareness_training", "infrastructure_resilience", "financial_damage_risk"],
+  } as const;
+
+  const score_vpn = Math.min(2, groups.vpn.reduce((a, k) => a + (isMeaningful(answerMap.get(k)) ? 1 : 0), 0));
+  const score_web = Math.min(3, groups.web.reduce((a, k) => a + (isMeaningful(answerMap.get(k)) ? 1 : 0), 0));
+  const score_awareness = Math.min(2, groups.awareness.reduce((a, k) => a + (isMeaningful(answerMap.get(k)) ? 1 : 0), 0));
+  const score_total = Math.round(((score_vpn + score_web + score_awareness) / 7) * 100);
+
+  const pdfBytes = makeSimplePdf([
+    "Security-Check in 3 Minuten",
+    `Lead ID: ${leadId}`,
+    `Firma: ${lead.company_name ?? ""}`,
+    `Score: ${score_total}%`,
+    "",
+    "Hinweis: Dieses PDF ist eine Minimalversion (Text).",
+  ]);
+
+  return new Response(pdfBytes, {
+    status: 200,
+    headers: {
+      "content-type": "application/pdf",
+      "content-disposition": `attachment; filename="Security-Check-in-3-Minuten_${leadId}.pdf"`,
+      "cache-control": "no-store",
+    },
+  });
 };
