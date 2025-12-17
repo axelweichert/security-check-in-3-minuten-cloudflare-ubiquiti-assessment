@@ -202,7 +202,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     for (const [question_key, rawVal] of entries) {
       const answer_value = Array.isArray(rawVal) ? rawVal.join(", ") : `${rawVal}`;
       await env.DB
-        .prepare(`INSERT INTO lead_answers (lead_id, question_key, answer_value) VALUES (?, ?, ?)`)
+        .prepare(`INSERT INTO lead_answers (lead_id, question_key, answer_value, score_value) VALUES (?, ?, ?, 0)`)
         .bind(leadId, question_key, answer_value)
         .run();
     }
