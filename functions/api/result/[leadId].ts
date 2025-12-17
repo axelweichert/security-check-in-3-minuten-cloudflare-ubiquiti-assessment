@@ -26,8 +26,51 @@ function normalizeRiskFromPercent(pct: number) {
  *  - Total: Prozent aus 7 Punkten
  */
 function computeScores(answerMap: Map<string, string>) {
-  const get = (k: string) => (answerMap.get(k) ?? "").toString();
+  const v = (k: string) => (answerMap.get(k) ?? "").toString();
 
+  // VPN (max 2)
+  const vpn_points =
+    (v("vpn_in_use") === "yes" ? 1 : 0) +
+    (v("vpn_solution") && v("vpn_solution") !== "none" ? 1 : 0);
+  const score_vpn = Math.min(2, Math.max(0, vpn_points));
+
+  // WEB (max 3)
+  let web_points =
+    (v("hosting_type") === "managed_hosting" ? 1 : 0) +
+    (v("web_protection") && v("web_protection") !== "none" ? 1 : 0) +
+    (v("security_incidents") === "no" ? 1 : 0);
+
+  // Bonus: keine kritischen Prozesse öffentlich
+  if (v("critical_processes_on_website") === "no") {
+    web_points += 1;
+  }
+
+  const score_web = Math.min(3, Math.max(0, web_points));
+
+  // AWARENESS (max 2)
+  let awareness_points =
+    (v("awareness_training") === "yes" || v("awareness_training") === "partially" ? 1 : 0) +
+    (v("infrastructure_resilience") === "medium" || v("infrastructure_resilience") === "high" ? 1 : 0);
+
+  const score_awareness = Math.min(2, Math.max(0, awareness_points));
+
+  const maxTotal = 7;
+  const totalPoints = score_vpn + score_web + score_awareness;
+  const score_total = Math.round((totalPoints / maxTotal) * 100);
+
+  const risk_level =
+    score_total >= 75 ? "low" :
+    score_total >= 40 ? "medium" :
+    "high";
+
+  return {
+    score_total,
+    score_vpn,
+    score_web,
+    score_awareness,
+    risk_level,
+  };
+}
   // --- VPN (0..2)
   let vpn = 0;
 
