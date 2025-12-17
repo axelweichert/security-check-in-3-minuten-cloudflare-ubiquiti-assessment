@@ -150,6 +150,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     let body: LeadInput;
     try {
       body = (await request.json()) as LeadInput;
+      const formData: LeadInput =
+        (body && typeof body === "object" && (body as any).formData && typeof (body as any).formData === "object")
+          ? ((body as any).formData as LeadInput)
+          : (body as LeadInput);
     } catch {
       return json(400, { ok: false, error: "Invalid JSON body" });
     }
