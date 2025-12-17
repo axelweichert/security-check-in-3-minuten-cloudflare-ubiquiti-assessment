@@ -208,8 +208,6 @@ function sanitizeText(v: unknown) {
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({
-  // PDF_DEBUG_WRAP
-  try {
  params, env }) => {
   const leadId = (params as any)?.leadId as string | undefined;
   if (!leadId) return new Response("Missing leadId", { status: 400 });
@@ -249,6 +247,8 @@ const printableAnswers = answers.map((a: any) => {
     // --- PDF LAYOUT ---
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([595.28, 841.89]); // A4 portrait (pt)
+  const marginX = 50;
+
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
@@ -441,12 +441,6 @@ const printableAnswers = answers.map((a: any) => {
         "cache-control": "no-store",
       },
     });
-  } catch (e: any) {
-    return new Response(JSON.stringify({ ok: false, error: "PDF generation failed", message: e?.message ?? String(e) }), {
-      status: 500,
-      headers: { "content-type": "application/json; charset=utf-8" },
-    });
-  }
   } catch (e: any) {
     console.error("PDF generation failed:", e);
     const msg = e?.message ? String(e.message) : String(e);
