@@ -1,7 +1,10 @@
 type Env = { DB: D1Database };
 
 const json = (status: number, data: unknown) =>
-  new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8" } });
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { "content-type": "application/json; charset=utf-8" },
+  });
 
 const ANSWER_GROUPS = {
   vpn: ["vpn_in_use", "vpn_solution", "vpn_users", "vpn_technology", "remote_access_satisfaction"],
@@ -24,8 +27,8 @@ function computeFallbackScores(answerMap: Map<string, string>) {
   const maxTotal = 2 + 3 + 2;
   const totalPoints = score_vpn + score_web + score_awareness;
   const score_total = Math.round((totalPoints / maxTotal) * 100);
+  const risk_level = normalizeRiskFromPercent(score_total);
 
-  const risk_level = score_total >= 75 ? "low" : score_total >= 40 ? "medium" : "high";
   return { score_total, score_vpn, score_web, score_awareness, risk_level };
 }
 
@@ -69,7 +72,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
 
     const fallback = computeFallbackScores(answerMap);
 
-    // Prefer persisted lead_scores if table exists + row exists
+    // Prefer persisted lead_scores if present
     let scores = fallback;
     try {
       const scoreRes = await env.DB
@@ -79,19 +82,18 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
 
       const row = ((scoreRes as any).results?.[0] ?? null) as any;
       if (row) {
-        // common schema variants we’ve seen in this repo:
-        // percent | score_total | total
         const pctRaw = row.percent ?? row.score_total ?? row.total ?? row.score ?? null;
         const pct = typeof pctRaw === "number" ? pctRaw : Number(pctRaw);
 
-        // breakdown_json may contain per-area scores; support multiple key shapes
         const breakdown = safeParseJson<any>(row.breakdown_json ?? row.breakdown ?? null) ?? {};
         const vpn = Number(breakdown.score_vpn ?? breakdown.vpn ?? breakdown.vpn_score ?? fallback.score_vpn);
         const web = Number(breakdown.score_web ?? breakdown.web ?? breakdown.web_score ?? fallback.score_web);
         const awareness = Number(breakdown.score_awareness ?? breakdown.awareness ?? breakdown.awareness_score ?? fallback.score_awareness);
 
         if (Number.isFinite(pct)) {
-          const risk = (row.rating ?? row.risk_level) ? String(row.rating ?? row.risk_level) : normalizeRiskFromPercent(pct);
+          const riskRaw = row.rating ?? row.risk_level;
+          const risk = riskRaw ? String(riskRaw) : normalizeRiskFromPercent(pct);
+
           scores = {
             score_total: Math.max(0, Math.min(100, Math.round(pct))),
             score_vpn: Number.isFinite(vpn) ? vpn : fallback.score_vpn,
@@ -102,7 +104,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
         }
       }
     } catch {
-      // ignore: no lead_scores table or query failed; keep fallback
+      // keep fallback if lead_scores doesn't exist or query fails
     }
 
     return json(200, { ok: true, item: { lead, answers, scores } });
