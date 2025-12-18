@@ -15,6 +15,7 @@ function computeScoresFromAnswers(items: { question_key: string; answer_value: a
   for (const a of items) m.set(String(a.question_key ?? ""), String(a.answer_value ?? ""));
   const get = (k: string) => (m.get(k) ?? "").toString();
 
+  // --- VPN (0..2)
   let vpn = 0;
   const vpnInUse = get("vpn_in_use");
   if (vpnInUse === "yes") vpn += 0.5;
@@ -40,6 +41,7 @@ function computeScoresFromAnswers(items: { question_key: string; answer_value: a
 
   const score_vpn = clamp(Math.round(vpn * 100) / 100, 0, 2);
 
+  // --- WEB (0..3)
   let web = 0;
   const critical = get("critical_processes_on_website");
   const hosting = get("hosting_type");
@@ -53,7 +55,7 @@ function computeScoresFromAnswers(items: { question_key: string; answer_value: a
   if (protection === "none") web += 0.0;
   else if (protection === "basic") web += 0.75;
   else if (protection === "waf") web += 1.6;
-  else if (protection === "waf_ddos" || protection === "waf+ddos") web += 2.2;
+  else if (protection === "waf_ddos" || protection === "waf+ddos" || protection === "waf,ddos_protection") web += 2.2;
   else if (protection) web += 1.0;
 
   if (critical === "yes" && protection === "none") web -= 0.8;
@@ -61,6 +63,7 @@ function computeScoresFromAnswers(items: { question_key: string; answer_value: a
 
   const score_web = clamp(Math.round(web * 100) / 100, 0, 3);
 
+  // --- AWARENESS (0..2)
   let aw = 0;
   const training = get("awareness_training");
   const resil = get("infrastructure_resilience");
@@ -110,31 +113,41 @@ const QUESTION_LABELS: Record<string, string> = {
 };
 
 const VALUE_LABELS: Record<string, Record<string, string>> = {
+  // Fallback: allgemeines Yes/No
   yes: { yes: "Ja", no: "Nein" },
 
   awareness_training: {
     yes: "Ja",
     partially: "Teilweise",
     no: "Nein",
+    unknown: "Unbekannt",
+    other: "Keine der genannten",
   },
 
   remote_access_satisfaction: {
     satisfied: "Zufrieden",
     neutral: "Neutral",
     unsatisfied: "Unzufrieden",
+    unknown: "Unbekannt",
+    other: "Keine der genannten",
   },
 
   infrastructure_resilience: {
     high: "Hoch",
     medium: "Mittel",
     low: "Niedrig",
+    unknown: "Unbekannt",
+    other: "Keine der genannten",
   },
 
   financial_damage_risk: {
     less_than_5k: "Unter 5.000 €",
     "5k_to_25k": "5.000 – 25.000 €",
-    more_than_25k: "Über 25.000 €",
     "25k_to_100k": "25.000 – 100.000 €",
+    more_than_100k: "Über 100.000 €",
+    more_than_25k: "Über 25.000 €",
+    unknown: "Unbekannt",
+    other: "Keine der genannten",
   },
 
   vpn_solution: {
@@ -144,6 +157,8 @@ const VALUE_LABELS: Record<string, Record<string, string>> = {
     zero_trust: "Zero Trust",
     ztna: "ZTNA",
     none: "Keine",
+    unknown: "Unbekannt",
+    other: "Keine der genannten",
   },
 
   vpn_users: {
@@ -152,7 +167,12 @@ const VALUE_LABELS: Record<string, Record<string, string>> = {
     "10_49": "10–49",
     "10_to_50": "10–50",
     "50_plus": "50+",
+    "51_to_200": "51–200",
+    "201_plus": "201+",
     more_than_50: "Über 50",
+    more_than_200: "Über 200",
+    unknown: "Unbekannt",
+    other: "Keine der genannten",
   },
 
   vpn_technology: {
@@ -161,9 +181,11 @@ const VALUE_LABELS: Record<string, Record<string, string>> = {
     wireguard: "WireGuard",
     sslvpn: "SSL-VPN",
     l2tp: "L2TP",
+    pptp: "PPTP",
     none: "Keine",
     unnamed: "Unbenannt",
     unknown: "Unbekannt",
+    other: "Keine der genannten",
   },
 
   hosting_type: {
@@ -172,6 +194,8 @@ const VALUE_LABELS: Record<string, Record<string, string>> = {
     managed_hosting: "Managed Hosting",
     on_prem: "On-Premises",
     saas: "SaaS",
+    unknown: "Unbekannt",
+    other: "Keine der genannten",
   },
 
   web_protection: {
@@ -181,9 +205,7 @@ const VALUE_LABELS: Record<string, Record<string, string>> = {
     ddos_protection: "DDoS-Schutz",
     waf_ddos: "WAF + DDoS-Schutz",
     "waf+ddos": "WAF + DDoS-Schutz",
-    // Varianten, die bei euch real vorkommen:
     "waf,ddos_protection": "WAF + DDoS-Schutz",
-    "waf,ddos": "WAF + DDoS-Schutz",
     cdn: "Content Delivery Network (CDN)",
     other: "Keine der genannten",
     unknown: "Unbekannt",
@@ -191,7 +213,6 @@ const VALUE_LABELS: Record<string, Record<string, string>> = {
 
   firewall_vendor: {
     fortinet: "Fortinet",
-    // häufige Falschschreibung aus euren Daten:
     forinet: "Fortinet",
     palo_alto: "Palo Alto Networks",
     check_point: "Check Point",
@@ -209,9 +230,11 @@ const VALUE_LABELS: Record<string, Record<string, string>> = {
   employee_range: {
     "1_9": "1–9 Mitarbeiter",
     "10_49": "10–49 Mitarbeiter",
-    "50_199": "50–199 Mitarbeiter",
-    "200_999": "200–999 Mitarbeiter",
+    "50_249": "50–249 Mitarbeiter",
+    "250_999": "250–999 Mitarbeiter",
     "1000_plus": "1.000+ Mitarbeiter",
+    unknown: "Unbekannt",
+    other: "Keine der genannten",
   },
 
   consent_contact: { "1": "Ja", "0": "Nein" },
@@ -221,60 +244,24 @@ const VALUE_LABELS: Record<string, Record<string, string>> = {
   zero_trust_vendor: {
     no: "Keiner",
     cloudflare: "Cloudflare",
+    unknown: "Unbekannt",
+    other: "Keine der genannten",
   },
 };
 
-// Robust: Normalisierung + Komma-Listen + Mapping-Fallbacks
 function toGermanQA(key: string, value: unknown) {
-  const raw0 = String(value ?? "");
-  const raw = raw0.trim();
+  const raw = String(value ?? "");
   const question = QUESTION_LABELS[key] ?? key;
 
-  const norm = (s: string) =>
-    s
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "_")
-      .replace(/-/g, "_");
+  const perKey = VALUE_LABELS[key];
+  if (perKey && perKey[raw] != null) return { question, answer: perKey[raw] };
 
-  const mapOne = (token: string) => {
-    const t0 = token.trim();
-    const t = norm(t0);
+  const yesNo = VALUE_LABELS.yes;
+  if (yesNo && yesNo[raw] != null) return { question, answer: yesNo[raw] };
 
-    const perKey = VALUE_LABELS[key];
-    if (perKey) {
-      // 1) exakter Match
-      if (perKey[t0] != null) return perKey[t0];
-      // 2) normalisierter Match
-      if (perKey[t] != null) return perKey[t];
-    }
-
-    // 3) generisches yes/no
-    const yesNo = VALUE_LABELS.yes;
-    if (yesNo) {
-      if (yesNo[t0] != null) return yesNo[t0];
-      if (yesNo[t] != null) return yesNo[t];
-    }
-
-    return t0;
-  };
-
-  // Komma-getrennte Mehrfachwerte (z. B. "waf,ddos_protection")
-  if (raw.includes(",")) {
-    const parts = raw.split(",").map((p) => p.trim()).filter(Boolean);
-
-    // Sonderfall: kompletter String ist als Alias gepflegt (z.B. "waf,ddos_protection")
-    const direct = mapOne(raw);
-    if (direct !== raw) return { question, answer: direct };
-
-    const mapped = parts.map(mapOne);
-    return { question, answer: mapped.join(", ") };
-  }
-
-  return { question, answer: mapOne(raw) };
+  // Zusätzlich: viele Keys liefern tatsächlich "1"/"0" für Consent – das ist perKey bereits abgedeckt.
+  return { question, answer: raw };
 }
-
-type Env = { DB: D1Database };
 
 function labelRisk(risk: string, lang: string) {
   const de: Record<string, string> = { low: "Niedriges Risiko", medium: "Mittleres Risiko", high: "Hohes Risiko" };
@@ -287,10 +274,13 @@ function sanitizeText(v: unknown) {
   return (v ?? "").toString().replace(/\s+/g, " ").trim();
 }
 
+type Env = { DB: D1Database };
+
 export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
   const leadId = (params as any)?.leadId as string | undefined;
   if (!leadId) return new Response("Missing leadId", { status: 400 });
 
+  // Lazy import, damit pdf-lib nur geladen wird, wenn der PDF-Endpoint getroffen wird
   const { PDFDocument, rgb, StandardFonts } = await import("pdf-lib");
 
   try {
@@ -333,12 +323,12 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     const drawText = (
       txt: string,
       x: number,
-      y: number,
+      yPos: number,
       size = 12,
       bold = false,
       color = rgb(0.12, 0.12, 0.12)
     ) => {
-      page.drawText(txt, { x, y, size, font: bold ? fontBold : font, color });
+      page.drawText(txt, { x, y: yPos, size, font: bold ? fontBold : font, color });
     };
 
     const wrapLines = (txt: string, maxWidth: number, size = 10) => {
@@ -349,8 +339,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
       for (const w of words) {
         const candidate = line ? `${line} ${w}` : w;
         const width = f.widthOfTextAtSize(candidate, size);
-        if (width <= maxWidth) line = candidate;
-        else {
+        if (width <= maxWidth) {
+          line = candidate;
+        } else {
           if (line) lines.push(line);
           line = w;
         }
@@ -364,7 +355,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     y -= 26;
 
     const company = sanitizeText(lead.company_name) || "—";
-    drawText(company, M, y, 12, false, rgb(0.3, 0.3, 0.3));
+    drawText(company, M, y, 12, false, rgb(0.30, 0.30, 0.30));
     y -= 18;
 
     drawText(`Lead-ID: ${leadId}`, M, y, 9, false, rgb(0.45, 0.45, 0.45));
@@ -382,11 +373,11 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
       width: W - 2 * M,
       height: cardH,
       color: rgb(0.97, 0.97, 0.98),
-      borderColor: rgb(0.9, 0.9, 0.92),
+      borderColor: rgb(0.90, 0.90, 0.92),
       borderWidth: 1,
     });
 
-    drawText(lang.startsWith("de") ? "Gesamtergebnis" : "Overall result", M + 18, y - 32, 12, true, rgb(0.25, 0.25, 0.3));
+    drawText(lang.startsWith("de") ? "Gesamtergebnis" : "Overall result", M + 18, y - 32, 12, true, rgb(0.25, 0.25, 0.30));
     drawText(`${scores.score_total}%`, M + 18, y - 92, 48, true);
 
     const risk = labelRisk(scores.risk_level, lang);
@@ -401,7 +392,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     const badgeY = y - 40;
 
     const riskColor =
-      scores.risk_level === "low" ? rgb(0.13, 0.55, 0.35) : scores.risk_level === "medium" ? rgb(0.74, 0.52, 0.1) : rgb(0.72, 0.18, 0.2);
+      scores.risk_level === "low" ? rgb(0.13, 0.55, 0.35) : scores.risk_level === "medium" ? rgb(0.74, 0.52, 0.10) : rgb(0.72, 0.18, 0.20);
 
     page.drawRectangle({ x: badgeX, y: badgeY, width: badgeW, height: badgeH, color: rgb(1, 1, 1), borderColor: riskColor, borderWidth: 1.5 });
     page.drawText(badgeText, { x: badgeX + badgePadX, y: badgeY + badgePadY + 1, size: badgeSize, font: fontBold, color: riskColor });
@@ -409,7 +400,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     // Breakdown (right side)
     const bx = W - M - 240;
     const by = y - 92;
-    drawText(lang.startsWith("de") ? "Teilbereiche" : "Sub-scores", bx, by + 46, 12, true, rgb(0.25, 0.25, 0.3));
+
+    drawText(lang.startsWith("de") ? "Teilbereiche" : "Sub-scores", bx, by + 46, 12, true, rgb(0.25, 0.25, 0.30));
 
     const row = (label: string, val: string, yy: number) => {
       drawText(label, bx, yy, 10, false, rgb(0.35, 0.35, 0.38));
@@ -417,8 +409,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     };
 
     row("VPN", `${scores.score_vpn}/2`, by + 26);
-    row(lang.startsWith("de") ? "Web" : "Web", `${scores.score_web}/3`, by + 10);
-    row(lang.startsWith("de") ? "Awareness" : "Awareness", `${scores.score_awareness}/2`, by - 6);
+    row("Web", `${scores.score_web}/3`, by + 10);
+    row("Awareness", `${scores.score_awareness}/2`, by - 6);
 
     y -= cardH + 22;
 
@@ -432,16 +424,16 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     const col1W = 190;
     const col2W = W - 2 * M - col1W;
 
-    drawText(lang.startsWith("de") ? "Frage (Key)" : "Question (key)", M, y, 10, true, rgb(0.25, 0.25, 0.3));
-    drawText(lang.startsWith("de") ? "Antwort" : "Answer", M + col1W, y, 10, true, rgb(0.25, 0.25, 0.3));
+    drawText(lang.startsWith("de") ? "Frage (Key)" : "Question (key)", M, y, 10, true, rgb(0.25, 0.25, 0.30));
+    drawText(lang.startsWith("de") ? "Antwort" : "Answer", M + col1W, y, 10, true, rgb(0.25, 0.25, 0.30));
     y -= 12;
 
-    page.drawLine({ start: { x: M, y }, end: { x: W - M, y }, thickness: 1, color: rgb(0.9, 0.9, 0.92) });
+    page.drawLine({ start: { x: M, y }, end: { x: W - M, y }, thickness: 1, color: rgb(0.90, 0.90, 0.92) });
     y -= 10;
 
     const rowHeightBase = 12;
 
-    // simple pagination
+    // simple pagination: if table overflows, add pages
     let curPage = page;
     let curY = y;
 
@@ -463,7 +455,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
         y: curY,
         size: 12,
         font: fontBold,
-        color: rgb(0.25, 0.25, 0.3),
+        color: rgb(0.25, 0.25, 0.30),
       });
       curY -= 16;
     };
@@ -476,6 +468,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
 
       if (curY - h < M + 40) newPage();
 
+      // alternating background
       curPage.drawRectangle({
         x: M,
         y: curY - h + 3,
@@ -486,19 +479,21 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
         borderWidth: 0.5,
       });
 
+      // key
       for (let i = 0; i < kLines.length; i++) {
-        curPage.drawText(kLines[i], { x: M + 6, y: curY - 11 * (i + 1) + 2, size: 9, font: fontBold, color: rgb(0.2, 0.2, 0.22) });
+        curPage.drawText(kLines[i], { x: M + 6, y: curY - 11 * (i + 1) + 2, size: 9, font: fontBold, color: rgb(0.20, 0.20, 0.22) });
       }
-
+      // value
       for (let i = 0; i < vLines.length; i++) {
         curPage.drawText(vLines[i], { x: M + col1W + 6, y: curY - 11 * (i + 1) + 2, size: 9, font, color: rgb(0.15, 0.15, 0.16) });
       }
 
+      // vertical divider
       curPage.drawLine({
         start: { x: M + col1W, y: curY + 3 },
         end: { x: M + col1W, y: curY - h + 3 },
         thickness: 0.5,
-        color: rgb(0.9, 0.9, 0.92),
+        color: rgb(0.90, 0.90, 0.92),
       });
 
       curY -= h + 6;
@@ -511,6 +506,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
       drawRow(k, v || "—");
     }
 
+    // Footer (last page)
     curPage.drawText(`Generated: ${new Date().toISOString()}`, { x: M, y: M - 16, size: 8, font, color: rgb(0.5, 0.5, 0.5) });
 
     const pdfBytes = await pdfDoc.save();
