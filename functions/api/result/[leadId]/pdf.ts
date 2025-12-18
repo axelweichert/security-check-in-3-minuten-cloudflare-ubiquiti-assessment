@@ -225,23 +225,19 @@ export const onRequestGet: PagesFunction<Env> = async ({
       .bind(leadId)
       .all();
     const answers = (((ansRes as any).results ?? []) as any[]).map((a) => ({
-      question_key: a.question_label,
-      answer_value: a.answer_label,
+      question_key: a.question_key,
+      answer_value: a.answer_value,
     }));
-  const scores = computeScoresFromAnswers(answers as any);
 
 
 const printable = (answers && answers.length) ? answers : ([{ question_key: "-", answer_value: "Keine Antworten vorhanden" }] as any);
+const scores = computeScoresFromAnswers(printable as any);
 
-const printableAnswers = answers.map((a: any) => {
+const printableAnswers = printable.map((a: any) => {
   const { question, answer } = toGermanQA(a.question_key, a.answer_value);
   return { ...a, question_label: question, answer_label: answer };
 });
 
-    const answerMap = new Map<string, string>();
-    for (const a of printableAnswers) answerMap.set(a.question_label, a.answer_label);
-
-    const scores_db = computeScores(answerMap);
     const lang = sanitizeText(lead.language) || "de";
 
     // --- PDF LAYOUT ---
@@ -299,9 +295,9 @@ const printableAnswers = answers.map((a: any) => {
     const cardH = 140;
     page.drawRectangle({ x: M, y: y - cardH, width: W - 2 * M, height: cardH, color: rgb(0.97, 0.97, 0.98), borderColor: rgb(0.90, 0.90, 0.92), borderWidth: 1 });
     drawText(lang.startsWith("de") ? "Gesamtergebnis" : "Overall result", M + 18, y - 32, 12, true, rgb(0.25, 0.25, 0.30));
-    drawText(`${scores_db.score_total}%`, M + 18, y - 92, 48, true);
+    drawText(`${scores.score_total}%`, M + 18, y - 92, 48, true);
 
-    const risk = labelRisk(scores_db.risk_level, lang);
+    const risk = labelRisk(scores.risk_level, lang);
     const badgeText = risk;
     const badgeSize = 11;
     const badgePadX = 10;
@@ -312,8 +308,8 @@ const printableAnswers = answers.map((a: any) => {
     const badgeX = W - M - badgeW - 18;
     const badgeY = y - 40;
     const riskColor =
-      scores_db.risk_level === "low" ? rgb(0.13, 0.55, 0.35) :
-      scores_db.risk_level === "medium" ? rgb(0.74, 0.52, 0.10) :
+      scores.risk_level === "low" ? rgb(0.13, 0.55, 0.35) :
+      scores.risk_level === "medium" ? rgb(0.74, 0.52, 0.10) :
       rgb(0.72, 0.18, 0.20);
 
     page.drawRectangle({ x: badgeX, y: badgeY, width: badgeW, height: badgeH, color: rgb(1, 1, 1), borderColor: riskColor, borderWidth: 1.5 });
@@ -328,29 +324,13 @@ const printableAnswers = answers.map((a: any) => {
       drawText(label, bx, yy, 10, false, rgb(0.35, 0.35, 0.38));
       drawText(val, bx + 170, yy, 10, true, rgb(0.12, 0.12, 0.12));
     };
-    row("VPN", `${scores_db.score_vpn}/2`, by + 26);
-    row(lang.startsWith("de") ? "Web" : "Web", `${scores_db.score_web}/3`, by + 10);
-    row(lang.startsWith("de") ? "Awareness" : "Awareness", `${scores_db.score_awareness}/2`, by - 6);
+    row("VPN", `${scores.score_vpn}/2`, by + 26);
+    row(lang.startsWith("de") ? "Web" : "Web", `${scores.score_web}/3`, by + 10);
+    row(lang.startsWith("de") ? "Awareness" : "Awareness", `${scores.score_awareness}/2`, by - 6);
 
     y -= (cardH + 22);
 
     // Answers table
-  // --- Gesamtergebnis
-  page.drawText("Gesamtergebnis", { x: marginX, y, size: 13, font: bold });
-  y -= 18;
-  page.drawText(String(scores_db.score_total) + "%", { x: marginX, y, size: 26, font: bold });
-  y -= 22;
-  page.drawText(riskLabelDe(scores_db.risk_level), { x: marginX, y, size: 12, font: bold });
-  y -= 22;
-  page.drawText("Teilbereiche", { x: marginX, y, size: 12, font: bold });
-  y -= 16;
-  page.drawText("VPN " + String(scores_db.score_vpn) + "/2", { x: marginX, y, size: 10.5, font });
-  y -= 14;
-  page.drawText("Web " + String(scores_db.score_web) + "/3", { x: marginX, y, size: 10.5, font });
-  y -= 14;
-  page.drawText("Awareness " + String(scores_db.score_awareness) + "/2", { x: marginX, y, size: 10.5, font });
-  y -= 22;
-
     drawText(lang.startsWith("de") ? "Ihre Antworten" : "Your answers", M, y, 13, true);
     y -= 16;
 
