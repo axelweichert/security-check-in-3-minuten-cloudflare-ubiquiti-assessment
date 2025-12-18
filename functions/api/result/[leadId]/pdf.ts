@@ -104,6 +104,7 @@ const VALUE_LABELS: Record<string, Record<string, string>> = {
     less_than_5k: "Unter 5.000 €",
     "5k_to_25k": "5.000 – 25.000 €",
     more_than_25k: "Über 25.000 €",
+    "25k_to_100k": "25.000 – 100.000 €",
   },
 
   vpn_solution: {
@@ -138,6 +139,7 @@ const VALUE_LABELS: Record<string, Record<string, string>> = {
     waf: "Web Application Firewall (WAF)",
     waf_ddos: "WAF + DDoS-Schutz",
     "waf+ddos": "WAF + DDoS-Schutz",
+    ddos_protection: "DDoS-Schutz",
   },
 
   employee_range: {
