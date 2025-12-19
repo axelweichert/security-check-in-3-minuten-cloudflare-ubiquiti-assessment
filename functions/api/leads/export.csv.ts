@@ -1,192 +1,133 @@
 type Env = { DB: D1Database };
 
-function csvEscape(v: unknown) {
-  const s = (v ?? "").toString();
-  // CSV: immer in Quotes, Quotes doppeln
-  return `"${s.replace(/"/g, '""')}"`;
+type LeadRow = {
+  id: string;
+  company_name: string | null;
+  created_at: string | null;
+  status: string | null;
+  risk_level: string | null;
+  discount_opt_in: number | null;
+};
+
+const text = (status: number, body: string, headers: Record<string, string> = {}) =>
+  new Response(body, {
+    status,
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      ...headers,
+    },
+  });
+
+async function tableHasColumn(env: Env, table: string, column: string) {
+  const r = await env.DB.prepare(`PRAGMA table_info(${table});`).all();
+  const rows = (r as any).results as Array<{ name: string }>;
+  return rows?.some((x) => x.name === column) ?? false;
 }
 
-function toISODateOnly(v: string | null) {
-  if (!v) return null;
-  // akzeptiert ISO, SQLite DATETIME, etc.
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return v;
-  return d.toISOString();
+function normalizeRisk(v: unknown): "low" | "medium" | "high" {
+  const s = String(v ?? "").toLowerCase().trim();
+  if (s === "low" || s === "medium" || s === "high") return s as any;
+  // defensiv: wenn irgendwas Unerwartetes kommt, nicht crashen
+  return "medium";
+}
+
+function riskLabelDe(risk: string) {
+  if (risk === "low") return "Niedrig";
+  if (risk === "high") return "Hoch";
+  return "Mittel";
+}
+
+function csvEscape(v: unknown) {
+  const s = String(v ?? "");
+  // RFC4180: wenn Komma, Quote oder Zeilenumbruch: doppelte Quotes, umschließen mit Quotes
+  if (/[",\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   try {
-    if (!env?.DB) {
-      return new Response(JSON.stringify({ ok: false, error: "DB binding missing" }), {
-        status: 500,
-        headers: { "content-type": "application/json; charset=utf-8" },
-      });
-    }
+    if (!env.DB) return text(500, JSON.stringify({ ok: false, error: "DB binding missing (expected env.DB)" }));
+
+    // Timestamp-Spalte robust ermitteln (weil ihr Schema hier schon mal abwich)
+    const hasCreatedAt = await tableHasColumn(env as any, "leads", "created_at");
+    const hasCreatedAtCamel = await tableHasColumn(env as any, "leads", "createdAt");
+    const hasCreated = await tableHasColumn(env as any, "leads", "created");
+    const hasSubmittedAt = await tableHasColumn(env as any, "leads", "submitted_at");
+
+    const createdCol =
+      hasCreatedAt ? "l.created_at" :
+      hasCreatedAtCamel ? "l.createdAt" :
+      hasSubmittedAt ? "l.submitted_at" :
+      hasCreated ? "l.created" :
+      // letzter Fallback: leere Spalte, aber kein Crash
+      "NULL";
+
+    const hasStatus = await tableHasColumn(env as any, "leads", "status");
+    const hasDiscount = await tableHasColumn(env as any, "leads", "discount_opt_in");
 
     const url = new URL(request.url);
-    const from = url.searchParams.get("from");
-    const to = url.searchParams.get("to");
-    const status = url.searchParams.get("status");
-    const risk = url.searchParams.get("risk");
-    const discount = url.searchParams.get("discount");
+    const limitRaw = url.searchParams.get("limit");
+    const limit = Math.min(Math.max(Number(limitRaw ?? 5000), 1), 20000);
 
-    const where: string[] = [];
-    const bind: any[] = [];
-
-    // Wir filtern wie in der Admin-Liste (best-effort ohne Schema-Annahmen)
-    // created_at: existiert bei dir offenbar nicht immer -> wir filtern nur, wenn vorhanden
-    // Deshalb bauen wir die WHERE für Datum NICHT hart ein.
-    // Stattdessen: wir versuchen zuerst created_at, bei Fehlern fallback ohne Datum.
-    const wantDateFilter = Boolean(from || to);
-
-    if (status && status !== "all") {
-      where.push(`l.status = ?`);
-      bind.push(status);
-    }
-    if (discount && discount !== "all") {
-      where.push(`l.discount_opt_in = ?`);
-      bind.push(discount === "yes" ? 1 : 0);
-    }
-    if (risk && risk !== "all") {
-      // risk_level kann in lead_scores oder leads liegen -> wir nutzen COALESCE
-      where.push(`COALESCE(s.risk_level, l.risk_level) = ?`);
-      bind.push(risk);
-    }
-
-    const baseSelect = `
-      SELECT
-        l.id,
-        l.company_name,
-        l.contact_name,
-        l.email,
-        l.phone,
-        l.employee_range,
-        l.firewall_vendor,
-        l.vpn_technology,
-        l.zero_trust_vendor,
-        l.consent_contact,
-        l.consent_tracking,
-        l.discount_opt_in,
-        l.status,
-        COALESCE(s.score_total, l.score_total) AS score_total,
-        COALESCE(s.risk_level, l.risk_level) AS risk_level,
-        l.created_at
-      FROM leads l
-      LEFT JOIN lead_scores s ON s.lead_id = l.id
-    `;
-
-    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
-    const orderSql = `ORDER BY l.rowid DESC`;
-
-    // 1) Versuch: mit created_at + optionalem Datumsfilter
-    const tryWithCreatedAt = async () => {
-      const where2 = [...where];
-      const bind2 = [...bind];
-
-      if (wantDateFilter) {
-        if (from) {
-          where2.push(`l.created_at >= ?`);
-          bind2.push(from);
-        }
-        if (to) {
-          where2.push(`l.created_at <= ?`);
-          bind2.push(to);
-        }
-      }
-
-      const whereSql2 = where2.length ? `WHERE ${where2.join(" AND ")}` : "";
-      const sql = `${baseSelect} ${whereSql2} ${orderSql}`;
-      return env.DB.prepare(sql).bind(...bind2).all();
-    };
-
-    // 2) Fallback: ohne created_at (falls Spalte nicht existiert)
-    const tryWithoutCreatedAt = async () => {
-      // identisch, aber ohne l.created_at im SELECT und ohne Datumfilter
+    // risk_level kommt (wenn vorhanden) aus lead_scores.rating, sonst fallback
+    let rows: LeadRow[] = [];
+    try {
       const sql = `
         SELECT
-          l.id,
-          l.company_name,
-          l.contact_name,
-          l.email,
-          l.phone,
-          l.employee_range,
-          l.firewall_vendor,
-          l.vpn_technology,
-          l.zero_trust_vendor,
-          l.consent_contact,
-          l.consent_tracking,
-          l.discount_opt_in,
-          l.status,
-          COALESCE(s.score_total, l.score_total) AS score_total,
-          COALESCE(s.risk_level, l.risk_level) AS risk_level
+          l.id AS id,
+          l.company_name AS company_name,
+          ${createdCol} AS created_at,
+          ${hasStatus ? "COALESCE(l.status,'new')" : "'new'"} AS status,
+          COALESCE(s.rating, 'medium') AS risk_level,
+          ${hasDiscount ? "COALESCE(l.discount_opt_in,0)" : "0"} AS discount_opt_in
         FROM leads l
         LEFT JOIN lead_scores s ON s.lead_id = l.id
-        ${whereSql}
-        ${orderSql}
+        ORDER BY ${createdCol !== "NULL" ? createdCol : "l.rowid"} DESC
+        LIMIT ?;
       `;
-      return env.DB.prepare(sql).bind(...bind).all();
-    };
-
-    let rows: any[] = [];
-    let hasCreatedAt = true;
-
-    try {
-      const r = await tryWithCreatedAt();
-      rows = (r?.results ?? []) as any[];
-      hasCreatedAt = true;
-    } catch (e: any) {
-      // typischer Fall bei dir: "no such column: created_at"
-      const r = await tryWithoutCreatedAt();
-      rows = (r?.results ?? []) as any[];
-      hasCreatedAt = false;
+      const r = await env.DB.prepare(sql).bind(limit).all();
+      rows = ((r as any).results ?? []) as LeadRow[];
+    } catch {
+      const sql = `
+        SELECT
+          id,
+          company_name,
+          ${createdCol.replace("l.", "")} AS created_at,
+          ${hasStatus ? "COALESCE(status,'new')" : "'new'"} AS status,
+          'medium' AS risk_level,
+          ${hasDiscount ? "COALESCE(discount_opt_in,0)" : "0"} AS discount_opt_in
+        FROM leads
+        ORDER BY ${createdCol !== "NULL" ? createdCol.replace("l.", "") : "rowid"} DESC
+        LIMIT ?;
+      `;
+      const r = await env.DB.prepare(sql).bind(limit).all();
+      rows = ((r as any).results ?? []) as LeadRow[];
     }
 
-    const headers = [
+    const header = [
       "id",
       "company_name",
-      "contact_name",
-      "email",
-      "phone",
-      "employee_range",
-      "firewall_vendor",
-      "vpn_technology",
-      "zero_trust_vendor",
-      "consent_contact",
-      "consent_tracking",
-      "discount_opt_in",
+      "created_at",
       "status",
-      "score_total",
       "risk_level",
-      ...(hasCreatedAt ? ["created_at"] : []),
-    ];
+      "risk_label_de",
+      "discount_opt_in",
+    ].join(",");
 
-    const lines: string[] = [];
-    lines.push(headers.map(csvEscape).join(","));
+    const lines = rows.map((x) => {
+      const risk = normalizeRisk(x.risk_level);
+      return [
+        csvEscape(x.id),
+        csvEscape(x.company_name ?? ""),
+        csvEscape(x.created_at ?? ""),
+        csvEscape(x.status ?? "new"),
+        csvEscape(risk),
+        csvEscape(riskLabelDe(risk)),
+        csvEscape(Number(x.discount_opt_in ?? 0) ? 1 : 0),
+      ].join(",");
+    });
 
-    for (const r of rows) {
-      const createdAt = hasCreatedAt ? toISODateOnly(r.created_at) : undefined;
-      const vals = [
-        r.id,
-        r.company_name,
-        r.contact_name,
-        r.email,
-        r.phone,
-        r.employee_range,
-        r.firewall_vendor,
-        r.vpn_technology,
-        r.zero_trust_vendor,
-        r.consent_contact ? "1" : "0",
-        r.consent_tracking ? "1" : "0",
-        r.discount_opt_in ? "1" : "0",
-        r.status,
-        r.score_total ?? "",
-        r.risk_level ?? "",
-        ...(hasCreatedAt ? [createdAt ?? ""] : []),
-      ];
-      lines.push(vals.map(csvEscape).join(","));
-    }
-
-    const csv = lines.join("\n");
+    const csv = [header, ...lines].join("\r\n");
 
     return new Response(csv, {
       status: 200,
@@ -196,11 +137,17 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
         "cache-control": "no-store",
       },
     });
-  } catch (e: any) {
-    return new Response(
-      JSON.stringify({ ok: false, error: "Export failed", message: String(e?.message ?? e) }),
-      { status: 500, headers: { "content-type": "application/json; charset=utf-8" } }
+  } catch (err: any) {
+    console.error("export.csv error:", err);
+    return text(
+      500,
+      JSON.stringify({
+        ok: false,
+        error: "Export failed",
+        message: String(err?.message ?? err),
+        name: err?.name,
+      }),
+      { "content-type": "application/json; charset=utf-8" }
     );
   }
 };
-
