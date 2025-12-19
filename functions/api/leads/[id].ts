@@ -8,9 +8,7 @@ function normalizeRiskFromPercent(pct: number) {
 }
 
 /**
- * Muss identisch zu:
- * - functions/api/leads.ts
- * - functions/api/result/[leadId]/pdf.ts
+ * Score-Logik (identisch zur PDF-Logik, soweit möglich).
  */
 function computeScoresFromAnswers(items: { question_key: string; answer_value: any }[]) {
   const m = new Map<string, string>();
@@ -132,8 +130,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     const lead = ((leadRes as any).results?.[0] ?? null) as any;
     if (!lead) return json({ ok: false, error: 'Not found' }, 404);
 
+    // WICHTIG: lead_answers hat bei dir sehr wahrscheinlich KEIN created_at -> deshalb NICHT selektieren.
     const ansRes = await env.DB
-      .prepare('SELECT id, question_key, answer_value, created_at FROM lead_answers WHERE lead_id = ? ORDER BY rowid ASC')
+      .prepare('SELECT id, question_key, answer_value FROM lead_answers WHERE lead_id = ? ORDER BY rowid ASC')
       .bind(leadId)
       .all();
 
@@ -141,12 +140,11 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
       id: a.id,
       question_key: a.question_key,
       answer_value: a.answer_value,
-      created_at: a.created_at,
     }));
 
     const scores = computeScoresFromAnswers(answers);
 
-    // Konsistenz: Detail liefert denselben risk_level wie die Übersicht.
+    // Konsistenz: Detail zeigt denselben risk_level wie berechnet.
     lead.risk_level = scores.risk_level;
 
     return json({ ok: true, lead, answers, scores });
