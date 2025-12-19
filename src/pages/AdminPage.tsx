@@ -1,3 +1,4 @@
+// src/pages/AdminPage.tsx
 import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -13,30 +14,47 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Download, Eye, Filter as FilterIcon } from 'lucide-react';
+
 const riskLevelColors: Record<string, string> = {
   low: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-300/50',
   medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-300/50',
   high: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-300/50',
 };
+
+function normalizeRisk(v: any): 'low' | 'medium' | 'high' {
+  const s = (v ?? '').toString().toLowerCase().trim();
+  if (s === 'low' || s === 'medium' || s === 'high') return s;
+  return 'medium';
+}
+
+function riskLabelShort(risk: 'low'|'medium'|'high', lang: string) {
+  const de = { low: 'Niedrig', medium: 'Mittel', high: 'Hoch' } as const;
+  const en = { low: 'Low', medium: 'Medium', high: 'High' } as const;
+  return (lang ?? 'de').startsWith('de') ? de[risk] : en[risk];
+}
+
 export default function AdminPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryParams = useMemo(() => searchParams.toString(), [searchParams]);
+
   const { data, isLoading, error } = useQuery<LeadListItem[]>({
     queryKey: ['leads', queryParams],
     queryFn: () => api<LeadListItem[]>(`/api/leads?${queryParams}`),
   });
+
   const handleFilterChange = (key: string, value: string) => {
     setSearchParams(prev => {
-      if (!value || value === 'all') {
-        prev.delete(key);
-      } else {
-        prev.set(key, value);
-      }
+      if (!value || value === 'all') prev.delete(key);
+      else prev.set(key, value);
       return prev;
     });
   };
+
   const clearFilters = () => setSearchParams({});
+
+  const lang = i18n.language ?? 'de';
+
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
@@ -48,26 +66,64 @@ export default function AdminPage() {
           </a>
         </Button>
       </div>
+
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><FilterIcon className="h-5 w-5" /> {t('admin.filters.title')}</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FilterIcon className="h-5 w-5" /> {t('admin.filters.title')}
+          </CardTitle>
+        </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-end">
-          <div className="space-y-2"><Label htmlFor="from">{t('admin.filters.date_from')}</Label><Input id="from" type="date" value={searchParams.get('from') || ''} onChange={e => handleFilterChange('from', e.target.value)} /></div>
-          <div className="space-y-2"><Label htmlFor="to">{t('admin.filters.date_to')}</Label><Input id="to" type="date" value={searchParams.get('to') || ''} onChange={e => handleFilterChange('to', e.target.value)} /></div>
-          <div className="space-y-2"><Label>{t('admin.filters.status')}</Label><Select value={searchParams.get('status') || 'all'} onValueChange={v => handleFilterChange('status', v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="all">{t('admin.filters.status.all')}</SelectItem><SelectItem value="new">{t('admin.filters.status.new')}</SelectItem><SelectItem value="done">{t('admin.filters.status.done')}</SelectItem></SelectContent>
-          </Select></div>
-          <div className="space-y-2"><Label>{t('admin.filters.risk')}</Label><Select value={searchParams.get('risk') || 'all'} onValueChange={v => handleFilterChange('risk', v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="all">{t('admin.filters.risk.all')}</SelectItem><SelectItem value="low">{t('admin.filters.risk.low')}</SelectItem><SelectItem value="medium">{t('admin.filters.risk.medium')}</SelectItem><SelectItem value="high">{t('admin.filters.risk.high')}</SelectItem></SelectContent>
-          </Select></div>
-          <div className="space-y-2"><Label>{t('admin.filters.discount')}</Label><Select value={searchParams.get('discount') || 'all'} onValueChange={v => handleFilterChange('discount', v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="all">{t('admin.filters.discount.all')}</SelectItem><SelectItem value="yes">{t('admin.filters.discount.yes')}</SelectItem><SelectItem value="no">{t('admin.filters.discount.no')}</SelectItem></SelectContent>
-          </Select></div>
+          <div className="space-y-2">
+            <Label htmlFor="from">{t('admin.filters.date_from')}</Label>
+            <Input id="from" type="date" value={searchParams.get('from') || ''} onChange={e => handleFilterChange('from', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="to">{t('admin.filters.date_to')}</Label>
+            <Input id="to" type="date" value={searchParams.get('to') || ''} onChange={e => handleFilterChange('to', e.target.value)} />
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('admin.filters.status')}</Label>
+            <Select value={searchParams.get('status') || 'all'} onValueChange={v => handleFilterChange('status', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('admin.filters.status.all')}</SelectItem>
+                <SelectItem value="new">{t('admin.filters.status.new')}</SelectItem>
+                <SelectItem value="done">{t('admin.filters.status.done')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('admin.filters.risk')}</Label>
+            <Select value={searchParams.get('risk') || 'all'} onValueChange={v => handleFilterChange('risk', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('admin.filters.risk.all')}</SelectItem>
+                <SelectItem value="low">{t('admin.filters.risk.low')}</SelectItem>
+                <SelectItem value="medium">{t('admin.filters.risk.medium')}</SelectItem>
+                <SelectItem value="high">{t('admin.filters.risk.high')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('admin.filters.discount')}</Label>
+            <Select value={searchParams.get('discount') || 'all'} onValueChange={v => handleFilterChange('discount', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('admin.filters.discount.all')}</SelectItem>
+                <SelectItem value="yes">{t('admin.filters.discount.yes')}</SelectItem>
+                <SelectItem value="no">{t('admin.filters.discount.no')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button variant="outline" onClick={clearFilters}>{t('admin.filters.clear')}</Button>
         </CardContent>
       </Card>
+
       <Card>
         <CardHeader><CardTitle>{t('admin.leads')}</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">
@@ -89,23 +145,34 @@ export default function AdminPage() {
                 ))
               ) : error ? (
                 <TableRow><TableCell colSpan={6} className="text-center text-destructive">Error loading leads.</TableCell></TableRow>
-              ) : data.length === 0 ? (
+              ) : !data || data.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center">No leads found.</TableCell></TableRow>
               ) : (
-                data.map(lead => (
-                  <TableRow key={lead.id} className="hover:bg-accent/50 transition-colors">
-                    <TableCell className="font-medium">{lead.company_name}</TableCell>
-                    <TableCell>{new Date(lead.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell><Badge variant={lead.status === 'new' ? 'default' : 'secondary'}>{lead.status}</Badge></TableCell>
-                    <TableCell><Badge className={riskLevelColors[lead.risk_level || '']}>{lead.risk_level}</Badge></TableCell>
-                    <TableCell>{lead.discount_opt_in ? t('admin.filters.discount.yes') : t('admin.filters.discount.no')}</TableCell>
-                    <TableCell className="text-right">
-                      <Button asChild variant="ghost" size="icon" className="hover:scale-110 transition-transform">
-                        <Link to={`/admin/leads/${lead.id}`}><Eye className="h-4 w-4" /></Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                data.map(lead => {
+                  const rl = normalizeRisk((lead as any).risk_level);
+                  return (
+                    <TableRow key={lead.id} className="hover:bg-accent/50 transition-colors">
+                      <TableCell className="font-medium">{(lead as any).company_name}</TableCell>
+                      <TableCell>{new Date((lead as any).created_at).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Badge variant={(lead as any).status === 'new' ? 'default' : 'secondary'}>
+                          {(lead as any).status === 'done' ? t('admin.filters.status.done') : t('admin.filters.status.new')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={riskLevelColors[rl]}>{riskLabelShort(rl, lang)}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {(lead as any).discount_opt_in ? t('admin.filters.discount.yes') : t('admin.filters.discount.no')}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button asChild variant="ghost" size="icon" className="hover:scale-110 transition-transform">
+                          <Link to={`/admin/leads/${lead.id}`}><Eye className="h-4 w-4" /></Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

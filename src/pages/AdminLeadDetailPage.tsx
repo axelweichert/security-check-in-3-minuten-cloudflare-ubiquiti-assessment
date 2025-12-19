@@ -1,3 +1,4 @@
+// src/pages/AdminLeadDetailPage.tsx
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +21,18 @@ const riskLevelColors: Record<string, string> = {
   medium: 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20',
   high: 'border-red-500/50 bg-red-500/10 text-red-400 hover:bg-red-500/20',
 };
+
+function normalizeRisk(v: any): 'low' | 'medium' | 'high' {
+  const s = (v ?? '').toString().toLowerCase().trim();
+  if (s === 'low' || s === 'medium' || s === 'high') return s;
+  return 'medium';
+}
+
+function riskLabelShort(risk: 'low'|'medium'|'high', lang: string) {
+  const de = { low: 'Niedrig', medium: 'Mittel', high: 'Hoch' } as const;
+  const en = { low: 'Low', medium: 'Medium', high: 'High' } as const;
+  return (lang ?? 'de').startsWith('de') ? de[risk] : en[risk];
+}
 
 const getDisplayValue = (questionId: string, value: any, t: (key: string) => string): string => {
   const v = (value ?? '').toString();
@@ -93,7 +106,6 @@ export default function AdminLeadDetailPage() {
     enabled: !!leadId,
   });
 
-  // API kann (je nach Wrapper) direkt payload liefern. Wir normalisieren defensiv.
   const payload: any = data as any;
   const lead = payload?.lead ?? payload?.item?.lead;
   const answers = payload?.answers ?? payload?.item?.answers ?? [];
@@ -105,7 +117,7 @@ export default function AdminLeadDetailPage() {
 
   const mutation = useMutation({
     mutationFn: (newStatus: 'new' | 'done') =>
-      api(`/api/leads/${leadId}/status`, {
+      api(`/api/leads/${leadId}`, {
         method: 'POST',
         body: JSON.stringify({ status: newStatus }),
       }),
@@ -148,7 +160,7 @@ export default function AdminLeadDetailPage() {
   }
 
   const lang = lead.language ?? 'de';
-  const riskLevel = scores?.risk_level ?? 'medium';
+  const riskLevel = normalizeRisk(scores?.risk_level ?? lead?.risk_level);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="space-y-8">
@@ -166,7 +178,7 @@ export default function AdminLeadDetailPage() {
           </div>
           <div className="flex items-center gap-4">
             <Badge variant="outline" className={`text-base px-4 py-2 rounded-md border-2 ${riskLevelColors[riskLevel]}`}>
-              {t(`result.risk.${riskLevel}`)}
+              {riskLabelShort(riskLevel, lang)}
             </Badge>
             <div className="flex items-center space-x-2 p-2 rounded-md bg-secondary">
               <Switch
