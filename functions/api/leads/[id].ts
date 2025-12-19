@@ -1,133 +1,186 @@
-import type { PagesFunction } from '@cloudflare/workers-types';
-import type { GetLeadResponse } from '@shared/types';
-
 type Env = { DB: D1Database };
 
-async function getTableColumns(env: Env, table: string): Promise<Set<string>> {
-  const res = await env.DB.prepare(`PRAGMA table_info(${table})`).all();
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+function normalizeRiskFromPercent(pct: number) {
+  return pct >= 75 ? 'low' : pct >= 40 ? 'medium' : 'high';
+}
+
+/**
+ * Muss identisch zu:
+ * - functions/api/leads.ts
+ * - functions/api/result/[leadId]/pdf.ts
+ */
+function computeScoresFromAnswers(items: { question_key: string; answer_value: any }[]) {
+  const m = new Map<string, string>();
+  for (const a of items) m.set(String(a.question_key ?? ''), String(a.answer_value ?? ''));
+  const get = (k: string) => (m.get(k) ?? '').toString();
+
+  let vpn = 0;
+  const vpnInUse = get('vpn_in_use');
+  if (vpnInUse === 'yes') vpn += 0.5;
+
+  const vpnTech = get('vpn_technology');
+  if (vpnTech === 'wireguard' || vpnTech === 'ipsec') vpn += 0.75;
+  else if (vpnTech === 'sslvpn') vpn += 0.35;
+  else if (vpnTech === 'pptp') vpn += 0.0;
+
+  const vpnSol = get('vpn_solution');
+  if (vpnSol === 'zero_trust' || vpnSol === 'ztna') vpn += 0.75;
+  else if (vpnSol === 'firewall_vpn' || vpnSol === 'vpn_gateway') vpn += 0.45;
+
+  const sat = get('remote_access_satisfaction');
+  if (sat === 'satisfied') vpn += 0.25;
+  else if (sat === 'neutral') vpn += 0.1;
+  else if (sat === 'unsatisfied') vpn += 0.0;
+
+  const users = get('vpn_users');
+  if (users === 'less_than_10') vpn += 0.15;
+  else if (users === '10_49') vpn += 0.1;
+  else if (users) vpn += 0.05;
+
+  const score_vpn = clamp(Math.round(vpn * 100) / 100, 0, 2);
+
+  let web = 0;
+  const critical = get('critical_processes_on_website');
+  const hosting = get('hosting_type');
+  const protection = get('web_protection');
+  const incidents = get('security_incidents');
+
+  if (hosting === 'managed_hosting') web += 0.5;
+  else if (hosting === 'cloud' || hosting === 'saas') web += 0.7;
+  else if (hosting) web += 0.25;
+
+  if (protection === 'none') web += 0.0;
+  else if (protection === 'basic') web += 0.75;
+  else if (protection === 'waf') web += 1.6;
+  else if (protection === 'waf_ddos' || protection === 'waf+ddos') web += 2.2;
+  else if (protection) web += 1.0;
+
+  if (critical === 'yes' && protection === 'none') web -= 0.8;
+  if (incidents === 'yes') web -= 0.7;
+
+  const score_web = clamp(Math.round(web * 100) / 100, 0, 3);
+
+  let aw = 0;
+  const training = get('awareness_training');
+  const resil = get('infrastructure_resilience');
+  const dmg = get('financial_damage_risk');
+
+  if (training === 'yes') aw += 0.9;
+  else if (training === 'partially') aw += 0.45;
+
+  if (resil === 'high') aw += 0.7;
+  else if (resil === 'medium') aw += 0.35;
+
+  if (dmg === 'less_than_5k') aw += 0.4;
+  else if (dmg === '5k_to_25k') aw += 0.2;
+  else if (dmg) aw += 0.0;
+
+  const score_awareness = clamp(Math.round(aw * 100) / 100, 0, 2);
+
+  const score_total = clamp(Math.round(((score_vpn + score_web + score_awareness) / 7) * 100), 0, 100);
+  const risk_level = normalizeRiskFromPercent(score_total);
+
+  return { score_total, score_vpn, score_web, score_awareness, risk_level };
+}
+
+async function getTableColumns(env: Env, tableName: string): Promise<Set<string>> {
+  const res = await env.DB.prepare(`PRAGMA table_info(${tableName})`).all();
   const cols = new Set<string>();
   for (const row of ((res as any).results ?? []) as any[]) cols.add(String(row.name));
   return cols;
 }
 
-function toIso(v: any): string | null {
-  if (!v) return null;
-  const s = String(v);
-  // akzeptiere bereits ISO-Strings; ansonsten best-effort Date parse
-  const d = new Date(s);
-  if (!Number.isNaN(d.getTime())) return d.toISOString();
-  return s;
+function json(data: any, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+  });
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
-  const leadId = (params as any)?.id as string | undefined;
-  if (!leadId) {
-    return new Response(JSON.stringify({ ok: false, error: 'Missing id' }), {
-      status: 400,
-      headers: { 'content-type': 'application/json; charset=utf-8' },
-    });
-  }
-
   try {
-    // Lead laden (SELECT * -> keine kaputten Spalten-Referenzen)
-    const leadRes = await env.DB.prepare('SELECT * FROM leads WHERE id = ? LIMIT 1').bind(leadId).all();
-    const lead = ((leadRes as any).results?.[0] ?? null) as any;
-    if (!lead) {
-      return new Response(JSON.stringify({ ok: false, error: 'Not found' }), {
-        status: 404,
-        headers: { 'content-type': 'application/json; charset=utf-8' },
-      });
-    }
+    const leadId = (params as any)?.id as string | undefined;
+    if (!leadId) return json({ ok: false, error: 'Missing id' }, 400);
 
-    // Antworten laden
+    const leadCols = await getTableColumns(env, 'leads');
+
+    const baseCols = [
+      'id',
+      'company_name',
+      'created_at',
+      'status',
+      'risk_level',
+      'discount_opt_in',
+      'language',
+      'contact_name',
+      'email',
+      'phone',
+      'employee_range',
+      'firewall_vendor',
+      'vpn_technology',
+      'zero_trust_vendor',
+      'consent_contact',
+      'consent_tracking',
+    ].filter((c) => leadCols.has(c));
+
+    const selectCols = baseCols.length ? baseCols.join(', ') : '*';
+
+    const leadRes = await env.DB.prepare(`SELECT ${selectCols} FROM leads WHERE id = ? LIMIT 1`).bind(leadId).all();
+    const lead = ((leadRes as any).results?.[0] ?? null) as any;
+    if (!lead) return json({ ok: false, error: 'Not found' }, 404);
+
     const ansRes = await env.DB
-      .prepare('SELECT id, lead_id, question_key, answer_value, score_value FROM lead_answers WHERE lead_id = ? ORDER BY rowid ASC')
+      .prepare('SELECT id, question_key, answer_value, created_at FROM lead_answers WHERE lead_id = ? ORDER BY rowid ASC')
       .bind(leadId)
       .all();
-    const answers = (((ansRes as any).results ?? []) as any[]).map((a) => ({
+
+    const answers = (((ansRes as any).results ?? []) as any[]).map((a: any) => ({
       id: a.id,
-      lead_id: a.lead_id,
       question_key: a.question_key,
       answer_value: a.answer_value,
-      score_value: a.score_value,
+      created_at: a.created_at,
     }));
 
-    // Scores optional (Tabelle existiert ggf. nicht in alten Schemas)
-    let scores: any = null;
-    try {
-      const scRes = await env.DB.prepare('SELECT * FROM lead_scores WHERE lead_id = ? LIMIT 1').bind(leadId).all();
-      scores = ((scRes as any).results?.[0] ?? null) as any;
-    } catch {
-      scores = null;
-    }
+    const scores = computeScoresFromAnswers(answers);
 
-    // created_at normalisieren (Frontend erwartet created_at)
-    // Unterstützt alte DBs (created / createdAt / timestamp) und neue (created_at)
-    const created =
-      toIso(lead.created_at) ??
-      toIso(lead.created) ??
-      toIso(lead.createdAt) ??
-      toIso(lead.timestamp) ??
-      toIso(lead.submitted_at) ??
-      new Date().toISOString();
+    // Konsistenz: Detail liefert denselben risk_level wie die Übersicht.
+    lead.risk_level = scores.risk_level;
 
-    // Patch lead-Objekt so, dass created_at garantiert vorhanden ist
-    lead.created_at = created;
-
-    const payload: GetLeadResponse = { ok: true, item: { lead, answers, scores } };
-
-    return new Response(JSON.stringify(payload), {
-      status: 200,
-      headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
-    });
+    return json({ ok: true, lead, answers, scores });
   } catch (e: any) {
-    const msg = e?.message ? String(e.message) : String(e);
-    return new Response(JSON.stringify({ ok: false, error: 'Failed to load lead', message: msg }), {
-      status: 500,
-      headers: { 'content-type': 'application/json; charset=utf-8' },
-    });
+    return json(
+      { ok: false, error: 'Failed to load lead', message: String(e?.message ?? e), stack: String(e?.stack ?? '') },
+      500
+    );
   }
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ params, env, request }) => {
-  const leadId = (params as any)?.id as string | undefined;
-  if (!leadId) {
-    return new Response(JSON.stringify({ ok: false, error: 'Missing id' }), {
-      status: 400,
-      headers: { 'content-type': 'application/json; charset=utf-8' },
-    });
-  }
-
   try {
-    const body = (await request.json().catch(() => null)) as any;
-    const status = String(body?.status ?? '').toLowerCase();
+    const leadId = (params as any)?.id as string | undefined;
+    if (!leadId) return json({ ok: false, error: 'Missing id' }, 400);
+
+    const body: any = await request.json().catch(() => ({}));
+    const status = (body?.status ?? '').toString();
+
     if (status !== 'new' && status !== 'done') {
-      return new Response(JSON.stringify({ ok: false, error: 'Invalid status' }), {
-        status: 400,
-        headers: { 'content-type': 'application/json; charset=utf-8' },
-      });
+      return json({ ok: false, error: 'Invalid status' }, 400);
     }
 
-    // Schema-compat: done_at existiert ggf. nicht
-    const cols = await getTableColumns(env, 'leads');
-    const hasDoneAt = cols.has('done_at');
-
-    if (hasDoneAt) {
-      const doneAt = status === 'done' ? new Date().toISOString() : null;
-      await env.DB.prepare('UPDATE leads SET status = ?, done_at = ? WHERE id = ?').bind(status, doneAt, leadId).run();
-    } else {
-      await env.DB.prepare('UPDATE leads SET status = ? WHERE id = ?').bind(status, leadId).run();
+    const leadCols = await getTableColumns(env, 'leads');
+    if (!leadCols.has('status')) {
+      return json({ ok: false, error: 'DB schema missing status column' }, 500);
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
-    });
+    await env.DB.prepare('UPDATE leads SET status = ? WHERE id = ?').bind(status, leadId).run();
+    return json({ ok: true, id: leadId, status });
   } catch (e: any) {
-    const msg = e?.message ? String(e.message) : String(e);
-    return new Response(JSON.stringify({ ok: false, error: 'Failed to update status', message: msg }), {
-      status: 500,
-      headers: { 'content-type': 'application/json; charset=utf-8' },
-    });
+    return json(
+      { ok: false, error: 'Failed to update status', message: String(e?.message ?? e), stack: String(e?.stack ?? '') },
+      500
+    );
   }
 };
